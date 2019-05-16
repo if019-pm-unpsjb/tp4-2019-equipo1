@@ -26,10 +26,27 @@ void *mundo(void *arg ) {
 }
 
 int  main(int  argc , char *argv []) {
+    /*
     pthread_t  h1;
     pthread_t  h2;
     pthread_create(&h1, NULL , hola , NULL);
     pthread_create(&h2, NULL , mundo , NULL);
     printf("FIN\n");
     pthread_exit( NULL );
+    */
+   char str[80] = "1 This is - www.tutorialspoint.com     - \nwebsite";
+   const char s[4] = " \t\n";
+   char *token;
+   
+   /* get the first token */
+   token = strtok(str, s);
+   
+   /* walk through other tokens */
+   while( token != NULL ) {
+      printf( "4 %s\n", token );
+    
+      token = strtok(NULL, s);
+   }
+   
+   return(0);
 }

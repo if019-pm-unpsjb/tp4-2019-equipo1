@@ -13,7 +13,7 @@
 
 #include "clientePortero.h"
 
-main ( int argc, char *argv[] ) {
+int main ( int argc, char *argv[] ) {
 
     int descriptor;
 	struct sockaddr_in dir;
@@ -29,10 +29,11 @@ main ( int argc, char *argv[] ) {
 
     printf( "\n\tCliente de Portero sobre TCP.\n" );
 	
+
 	/*-------------------------------------------------------------------- 
 	 * Establecer la dirección del servidor y conectarse
 	 *--------------------------------------------------------------------*/
-    /**
+    
 	bzero( (char *) &dir, sizeof( dir ) );
 	dir.sin_family = AF_INET;
 	if ( inet_pton( AF_INET, argv[1], &dir.sin_addr ) <= 0 ) {
@@ -45,18 +46,19 @@ main ( int argc, char *argv[] ) {
 		perror( "ERROR CONECTAR:" );
 		exit( -1 );
 	}
-    */
+
 	
-    principal( stdin, 0 );
+    principal( stdin, descriptor );
 	
 	/*---------------------------------------------------------------------
 	 * Cerrar la conexión y terminar
 	 *---------------------------------------------------------------------*/
-    /**
-	cerrar( descriptor );
+    
+    printf( "Cerrando conexion....\n");
+	close( descriptor );
 	printf( "Proceso cliente finalizado.\n" );
 	exit( 0 );
-    */
+    return 0;
 
 }
 
@@ -67,15 +69,18 @@ int conectar( struct sockaddr_in dir ) {
 	int sockfd;
 	
 	/* abrir el socket TPC */
+    printf( "Abriendo socket\n");
 	if ( ( sockfd = socket( AF_INET, SOCK_STREAM, 0 ) ) < 0 )
 		return ( -1 );
 	
 	/* conectarse al servidor */
+    printf( "conectando servidor\n");
 	if ( connect( sockfd, (struct sockaddr *) &dir, sizeof( dir ) ) < 0 ) 
 		return ( -2 );
 	
 	return ( sockfd );
 }
+
 
 int principal( FILE *fp, int sockfd ) {
 	int resultado, total;
@@ -85,88 +90,156 @@ int principal( FILE *fp, int sockfd ) {
     /*---------------------------------------------------------------------
 	 * Comandos del cliente 
 	 *---------------------------------------------------------------------*/
-    prinf( "--- Comandos: \n1) Luces ON/OFF/PROG Hora Minuto Duracion\n2) Riego ON/OFF/PROG Hora Minuto Duracion\n3) Imagen Portero\n4) Contestar llamanda\n5) Salir");
+    printf( "Comandos: \n1) Luces ON/OFF/PROG Hora Minuto Duracion\n2) Riego ON/OFF/PROG Hora Minuto Duracion\n3) Imagen Portero\n4) Contestar llamanda\n5) Salir\nIngrese opcion:  ");
 	while( fgets( msg, MAXLINEA, fp ) != NULL ) {
 		msg[ strlen( msg ) -1 ] = '\0';
-
-        int i = analizar( msg );
-        if (i < 0)
+        char **ptr;
+        //separarPalabras( msg, ptr );
+        analizar( msg, sockfd );
+        //if (i < 0)
             exit(0);  
 	}
 }
 
-int analizar( char *in ) {
-    char sp[5] = " \t\n";
-    char *ptr;
-    char mens[20];
-
-    ptr = strtok( in, sp );
-    int len = strlen( ptr );
+int analizar( char *in, int sockfd ) {
     
-    int opt = atoi( ptr[0] );
+    char **ptr;
+    int cp;
+
+    cp = separarPalabras( in, &ptr );
+    int opt = (int)atoi( ptr[0] );
+
     switch (opt)
     {
         case 1:
-            if (strcmp( ptr[1], "ON") == 0) {
-                // llamar a comando luces prender
-                printf( "llamar a comando luces prender");
-            }
-            else if (strcmp( ptr[1], "OFF") == 0) {
-                // llamar a comando luces apagar
-                printf("llamar a comando luces apagar");
-            }
-            else if (strcmp( ptr[1], "PROG" ) == 0){
-                // ingresa por PROG
-                int h = atoi( ptr[2] );
-                int m = atoi( ptr[3] );
-                int d = atoi( ptr[4] );
-                // llamar a comando programar luces
-                printf("llamar a comando programar luces");
+            if (cp >= 2) {
+                if (strcmp( ptr[1], "ON") == 0) {
+                    // llamar a comando luces prender
+                    printf( "llamar a comando luces prender\n");
+                    char *m = "LUCES ON";
+                    enviar( sockfd, m, strlen(m) );
+                }
+                else if (strcmp( ptr[1], "OFF") == 0) {
+                    // llamar a comando luces apagar
+                    printf("llamar a comando luces apagar\n");
+                    enviar( sockfd, "LUCES OFF", 10 );
+                }
+                else if (strcmp( ptr[1], "PROG" ) == 0){
+                    if (cp == 5) {
+                        int h = atoi( ptr[2] );
+                        int m = atoi( ptr[3] );
+                        int d = atoi( ptr[4] );
+                        // llamar a comando programar luces
+                        printf("llamar a comando programar luces\n");
+                        enviar( sockfd, "LUCES PROG ", 12 );
+                    }
+                    else {
+                        printf( "Luces PROG incorrecto\n");
+                        opt = 6;
+                    }
+                }
+                else {
+                    // comando invalido
+                    printf( "comando invalido \n");
+                }
             }
             else {
-                // comando invalido
-                printf( "comando invalido ");
+                printf( "Error Luces\n");
             }
             break;
         
         case 2:
             if (strcmp( ptr[1], "ON") == 0) {
                 // llamar a comando luces prender
-                printf( "llamar a comando riego prender");
+                printf( "llamar a comando riego prender\n");
+                enviar( sockfd, "RIEGO ON", 9 );
             }
             else if (strcmp( ptr[1], "OFF") == 0) {
                 // llamar a comando luces apagar
-                printf("llamar a comando riego apagar");
+                printf("llamar a comando riego apagar\n");
+                enviar( sockfd, "RIEGO OFF", 10 );
             }
             else if (strcmp( ptr[1], "PROG" ) == 0){
-                // ingresa por PROG
-                int h = atoi( ptr[2] );
-                int m = atoi( ptr[3] );
-                int d = atoi( ptr[4] );
-                // llamar a comando programar luces
-                printf("llamar a comando programar riego");
+                if (cp == 5) {
+                    int h = atoi( ptr[2] );
+                    int m = atoi( ptr[3] );
+                    int d = atoi( ptr[4] );
+                    // llamar a comando programar luces
+                    printf("llamar a comando programar riego\n");
+                    enviar( sockfd, "RIEGO PROG", 11 );
+                }
+                else {
+                    printf( "Riego PROG incorrecto\n");
+                    opt = 6;
+                }
+                
             }
             else {
                 // comando invalido
-                printf( "comando invalido ");
+                printf( "comando invalido \n");
             }
             break;
         
         case 3:
-            printf( "Pedir Imagen");
+            printf( "Pedir Imagen\n");
             break;
 
         case 4: 
-            printf( "contestar llamada" );
+            printf( "contestar llamada\n" );
             break;
         
         case 5:
-            printf( "Salir.....");
+            printf( "Salir.....\n");
+            opt = -1;
+            break;
         default:
-            printf( "Opcion Incorrecta" );
+            printf( "Opcion Incorrecta\n" );
+            opt = 6;
             break;
     }
 
-    return -1;
+    return opt;
 
+}
+
+int enviar( int dcon, char *msg, int len ) {
+    int result;
+
+    if ((result = write( dcon, msg, len ) )< 0) 
+        return -1;
+    
+    return result;
+}
+
+
+int separarPalabras( char *cadena, char ***aaargs ){
+    //char cadena[] = "Esto es un texto. Puede ir separado por puntos, espacios o comas.",
+    char delimitador[] = " \t\n";
+    char **aargs;
+    char *tmp;
+    int num=0;
+    int i;
+    
+    
+    aargs=malloc(sizeof(char**));
+
+    tmp = strtok(cadena, delimitador);
+    
+    do {
+        aargs[num]=malloc(sizeof(char*));
+
+        /*       strcpy(aargs[num], tmp); */
+        aargs[num]=tmp;
+        num++;
+
+        /* Reservamos memoria para una palabra más */
+        aargs=realloc(aargs, sizeof(char**)*(num+1));
+
+        /* Extraemos la siguiente palabra */
+        tmp = strtok(NULL, delimitador);
+    } while (tmp!=NULL);  
+
+    *aaargs = aargs;
+
+    return num;
 }
