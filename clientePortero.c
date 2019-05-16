@@ -13,6 +13,8 @@
 
 #include "clientePortero.h"
 
+/* cambios */
+
 int main ( int argc, char *argv[] ) {
 
     int descriptor;
