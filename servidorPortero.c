@@ -5,13 +5,40 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #include "servidorPortero.h"
 
+void *atenderPeticion( void *d ) {
+	printf( "(%5d) Atendiendo petición.\n", getpid() );
+	int total;	
+	char *msg = (char*)malloc( sizeof( MAXLINEA + 1 ) );
+		
+   	while ( total = recibir( *((int *)d), msg ) > 0 ) {
+		printf( "(%5d) Recibido: %s\n", getpid(), msg );
+		
+		/*-------------------------------------------------------* 
+		* Realizar la tarea específica del servicio
+		*-------------------------------------------------------*/
+		procesar( msg );
+	
+		/*-------------------------------------------------------* 
+	 	* Responder petición		      					
+		*-------------------------------------------------------*/
+		if ( ( total = enviar( *((int *)d), msg ) ) < 0 ) { 
+			perror("ERROR ENVIAR: ");
+			exit(-1);
+		}
+		printf("(%5d) Respuesta enviada: %s.\n", getpid(), msg );
+	}
+}
+
 int main ( int argc, char *argv[] ) {
 
-    char *msg;
+    //char *msg;
 	int descriptor, ndescriptor, total, pid_hijo;
+	pthread_t t_hijo;
+
 	
 	/*---------------------------------------------------------------------*
 	 * Verificar los argumentos
@@ -33,7 +60,7 @@ int main ( int argc, char *argv[] ) {
 	}	
 	printf( "Servidor inicializado.\n" );
 
-    msg = (char*)malloc( sizeof( MAXLINEA + 1 ) );
+    //msg = (char*)malloc( sizeof( MAXLINEA + 1 ) );
 
 	/*
 	 * Comenzar tarea del servidor
@@ -48,45 +75,46 @@ int main ( int argc, char *argv[] ) {
 			exit(-1);
 		}
 		
+		pthread_create( &t_hijo, NULL, atenderPeticion, (void *)&ndescriptor );
+
+		//pthread_join( t_hijo, NULL );
+
+
 		/*-------------------------------------------------------*  
 		 * Realizar fork del proceso para atender una petición 
 		 *-------------------------------------------------------*/
+		/*
 		if ( ( pid_hijo = fork() ) < 0 ) {
 			perror("ERROR FORK:");
 			exit(-1);
-   		} else if ( pid_hijo == 0 ) { /* soy el hijo */
+   		} else if ( pid_hijo == 0 ) { 
 			printf( "(%5d) Atendiendo petición.\n", getpid() );
 			
    			while ( total = recibir( ndescriptor, msg ) > 0 ) {
 				printf( "(%5d) Recibido: %s\n", getpid(), msg );
 		
-				/*-------------------------------------------------------* 
-		 	 	 * Realizar la tarea específica del servicio
-		 	 	 *-------------------------------------------------------*/
 				procesar( msg );
 	
-				/*-------------------------------------------------------* 
-	 			 * Responder petición		      					
-				 *-------------------------------------------------------*/
 				if ( ( total = enviar( ndescriptor, msg ) ) < 0 ) { 
 					perror("ERROR ENVIAR: ");
 					exit(-1);
 				}
 				printf("(%5d) Respuesta enviada: %s.\n", getpid(), msg );
 			}
-			
-			/*-------------------------------------------------------* 
-			 * Cerrar conexión y terminar
-			 *-------------------------------------------------------*/
+
 			close( ndescriptor );
 			printf("(%5d) Conexión cerrada.\n", getpid() );
 			exit( 0 );
-		} else /* soy el padre */
+		} else 
 			printf( "Solicitud atendida por el proceso hijo nro. %d\n", pid_hijo );
+
+		*/
 	}
 
     return 1;
 }
+
+
 
 /*-------------------------------------------------------------------------*
  * inicializar() - inicializar el servidor
@@ -161,7 +189,7 @@ int recibir( int nsockfd, char *msg ) {
 		close( nsockfd );
 		return ( -2 );
 	}
- printf( "comando = %s\n", msg );
+ 	printf( "comando = %s\n", msg );
 	return ( longitud );
 }
 

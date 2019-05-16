@@ -15,3 +15,7 @@ void solicitarImagen();
 void contestar( int fd_audio );
 
 int separarPalabras( char *cad, char ***ptr );
+
+int recibirRespuesta( int sock, char *m, int len );
+
+int enviar( int sock, char *m, int len );

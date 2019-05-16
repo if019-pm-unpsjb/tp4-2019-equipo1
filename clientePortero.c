@@ -110,7 +110,7 @@ int analizar( char *in, int sockfd ) {
 
     cp = separarPalabras( in, &ptr );
     int opt = (int)atoi( ptr[0] );
-
+    char *m = (char*)malloc( sizeof( MAXLINEA + 1 ) );
     switch (opt)
     {
         case 1:
@@ -118,13 +118,14 @@ int analizar( char *in, int sockfd ) {
                 if (strcmp( ptr[1], "ON") == 0) {
                     // llamar a comando luces prender
                     printf( "llamar a comando luces prender\n");
-                    char *m = "LUCES ON";
-                    enviar( sockfd, m, strlen(m) );
+                    enviar( sockfd, "LUCES ON", 8 );
+                    recibirRespuesta( sockfd, m, (int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "OFF") == 0) {
                     // llamar a comando luces apagar
                     printf("llamar a comando luces apagar\n");
                     enviar( sockfd, "LUCES OFF", 10 );
+                    recibirRespuesta( sockfd, m,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "PROG" ) == 0){
                     if (cp == 5) {
@@ -134,6 +135,7 @@ int analizar( char *in, int sockfd ) {
                         // llamar a comando programar luces
                         printf("llamar a comando programar luces\n");
                         enviar( sockfd, "LUCES PROG ", 12 );
+                        //recibirRespuesta( sockfd, m, (int)MAXLINEA);
                     }
                     else {
                         printf( "Luces PROG incorrecto\n");
@@ -155,11 +157,13 @@ int analizar( char *in, int sockfd ) {
                 // llamar a comando luces prender
                 printf( "llamar a comando riego prender\n");
                 enviar( sockfd, "RIEGO ON", 9 );
+                recibirRespuesta( sockfd, m,(int)MAXLINEA);
             }
             else if (strcmp( ptr[1], "OFF") == 0) {
                 // llamar a comando luces apagar
                 printf("llamar a comando riego apagar\n");
                 enviar( sockfd, "RIEGO OFF", 10 );
+                recibirRespuesta( sockfd, m,(int)MAXLINEA);
             }
             else if (strcmp( ptr[1], "PROG" ) == 0){
                 if (cp == 5) {
@@ -169,6 +173,7 @@ int analizar( char *in, int sockfd ) {
                     // llamar a comando programar luces
                     printf("llamar a comando programar riego\n");
                     enviar( sockfd, "RIEGO PROG", 11 );
+                    //recibirRespuesta( sockfd, m,(int)MAXLINEA);
                 }
                 else {
                     printf( "Riego PROG incorrecto\n");
@@ -211,6 +216,18 @@ int enviar( int dcon, char *msg, int len ) {
         return -1;
     
     return result;
+}
+
+int recibirRespuesta( int dcon, char *msg, int len ) {
+    int longitud;
+
+	bzero( msg, MAXLINEA );
+
+	if ( ( longitud =  read( dcon, msg, (int)MAXLINEA ) ) < 0 ) {
+		return ( -2 );
+	}
+ 	printf( "recibido = %s\n", msg );
+	return ( longitud );
 }
 
 
