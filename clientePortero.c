@@ -57,10 +57,10 @@ int main ( int argc, char *argv[] ) {
 	 *---------------------------------------------------------------------*/
     
     printf( "Cerrando conexion....\n");
-	close( descriptor );
+	//close( descriptor );
 	printf( "Proceso cliente finalizado.\n" );
-	exit( 0 );
-    return 0;
+
+    return 1;
 }
 
 /*-------------------------------------------------------------------------
@@ -97,7 +97,7 @@ int principal( FILE *fp, int sockfd ) {
 		msg[ strlen( msg ) -1 ] = '\0';
         char **ptr;
         if (analizar( msg, sockfd, respuesta ) == -1)
-            return 0; 
+            break; 
         printf( "Presione una tecla para continuar.... ");
         getchar();
         system("clear");
@@ -108,6 +108,7 @@ int principal( FILE *fp, int sockfd ) {
 int analizar( char *in, int sockfd, char *resp ) {
     char **ptr;
     int cp;
+    int ret=0;
     cp = separarPalabras( in, &ptr );
     int opt = (int)atoi( ptr[0] );
     //char *m = (char*)malloc( sizeof( MAXLINEA + 1 ) );
@@ -139,7 +140,7 @@ int analizar( char *in, int sockfd, char *resp ) {
                     }
                     else {
                         printf( "Luces PROG incorrecto\n");
-                        opt = 6;
+                        ret = 6;
                     }
                 }
                 else {
@@ -178,7 +179,7 @@ int analizar( char *in, int sockfd, char *resp ) {
                     }
                     else {
                         printf( "Riego PROG incorrecto\n");
-                        opt = 6;
+                        ret = 6;
                     } 
                 }
                 else {
@@ -201,15 +202,15 @@ int analizar( char *in, int sockfd, char *resp ) {
         
         case 5:
             printf( "Salir.....\n");
-            return -1;
+            ret = -1;
             break;
         default:
             printf( "Opcion Incorrecta\n" );
-            opt = 6;
+            ret = 6;
             break;
     }
 
-    return opt;
+    return ret;
 
 }
 
