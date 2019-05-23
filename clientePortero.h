@@ -4,7 +4,7 @@ int conectar( struct sockaddr_in dir );
 
 int principal( FILE *fp, int dir );
 
-int analizar( char *s, int sockfd );
+int analizar( char *s, int sockfd, char *respuesta );
 
 void luces( int enc_apag, int hora, int minutos );
 

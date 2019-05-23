@@ -61,7 +61,6 @@ int main ( int argc, char *argv[] ) {
 	printf( "Proceso cliente finalizado.\n" );
 	exit( 0 );
     return 0;
-
 }
 
 /*-------------------------------------------------------------------------
@@ -87,30 +86,38 @@ int conectar( struct sockaddr_in dir ) {
 int principal( FILE *fp, int sockfd ) {
 	int resultado, total;
 	char msg[ MAXLINEA ];
-    char msg2[ MAXLINEA + 1 ];
+    char respuesta[ MAXLINEA + 1 ];
 
     /*---------------------------------------------------------------------
 	 * Comandos del cliente 
 	 *---------------------------------------------------------------------*/
+    system("clear");
     printf( "Comandos: \n1) Luces ON/OFF/PROG Hora Minuto Duracion\n2) Riego ON/OFF/PROG Hora Minuto Duracion\n3) Imagen Portero\n4) Contestar llamanda\n5) Salir\nIngrese opcion:  ");
 	while( fgets( msg, MAXLINEA, fp ) != NULL ) {
 		msg[ strlen( msg ) -1 ] = '\0';
         char **ptr;
+<<<<<<< HEAD
         //separarPalabras( msg, ptr );
         //lo cambie para que el cliente se mantenga abierto
         if (resultado=analizar( msg, sockfd ) < 0)
             exit(0);  
+=======
+        if (analizar( msg, sockfd, respuesta ) == -1)
+            return 0; 
+        printf( "Presione una tecla para continuar.... ");
+        getchar();
+        system("clear");
+        printf( "Comandos: \n1) Luces ON/OFF/PROG Hora Minuto Duracion\n2) Riego ON/OFF/PROG Hora Minuto Duracion\n3) Imagen Portero\n4) Contestar llamanda\n5) Salir\nIngrese opcion:  "); 
+>>>>>>> 2f292b02facca3922c5ca515b4c6a7b2d93c1ca1
 	}
 }
 
-int analizar( char *in, int sockfd ) {
-    
+int analizar( char *in, int sockfd, char *resp ) {
     char **ptr;
     int cp;
-
     cp = separarPalabras( in, &ptr );
     int opt = (int)atoi( ptr[0] );
-    char *m = (char*)malloc( sizeof( MAXLINEA + 1 ) );
+    //char *m = (char*)malloc( sizeof( MAXLINEA + 1 ) );
     switch (opt)
     {
         case 1:
@@ -119,13 +126,13 @@ int analizar( char *in, int sockfd ) {
                     // llamar a comando luces prender
                     printf( "llamar a comando luces prender\n");
                     enviar( sockfd, "LUCES ON", 8 );
-                    recibirRespuesta( sockfd, m, (int)MAXLINEA);
+                    recibirRespuesta( sockfd, resp, (int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "OFF") == 0) {
                     // llamar a comando luces apagar
                     printf("llamar a comando luces apagar\n");
-                    enviar( sockfd, "LUCES OFF", 10 );
-                    recibirRespuesta( sockfd, m,(int)MAXLINEA);
+                    enviar( sockfd, "LUCES OFF", 9 );
+                    recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "PROG" ) == 0){
                     if (cp == 5) {
@@ -134,8 +141,8 @@ int analizar( char *in, int sockfd ) {
                         int d = atoi( ptr[4] );
                         // llamar a comando programar luces
                         printf("llamar a comando programar luces\n");
-                        enviar( sockfd, "LUCES PROG ", 12 );
-                        //recibirRespuesta( sockfd, m, (int)MAXLINEA);
+                        enviar( sockfd, "LUCES PROG", 10 );
+                        recibirRespuesta( sockfd, resp, (int)MAXLINEA);
                     }
                     else {
                         printf( "Luces PROG incorrecto\n");
@@ -153,37 +160,41 @@ int analizar( char *in, int sockfd ) {
             break;
         
         case 2:
-            if (strcmp( ptr[1], "ON") == 0) {
-                // llamar a comando luces prender
-                printf( "llamar a comando riego prender\n");
-                enviar( sockfd, "RIEGO ON", 9 );
-                recibirRespuesta( sockfd, m,(int)MAXLINEA);
-            }
-            else if (strcmp( ptr[1], "OFF") == 0) {
-                // llamar a comando luces apagar
-                printf("llamar a comando riego apagar\n");
-                enviar( sockfd, "RIEGO OFF", 10 );
-                recibirRespuesta( sockfd, m,(int)MAXLINEA);
-            }
-            else if (strcmp( ptr[1], "PROG" ) == 0){
-                if (cp == 5) {
-                    int h = atoi( ptr[2] );
-                    int m = atoi( ptr[3] );
-                    int d = atoi( ptr[4] );
-                    // llamar a comando programar luces
-                    printf("llamar a comando programar riego\n");
-                    enviar( sockfd, "RIEGO PROG", 11 );
-                    //recibirRespuesta( sockfd, m,(int)MAXLINEA);
+            if (cp >= 2) {
+                if (strcmp( ptr[1], "ON") == 0) {
+                    // llamar a comando luces prender
+                    printf( "llamar a comando riego prender\n");
+                    enviar( sockfd, "RIEGO ON", 8 );
+                    recibirRespuesta( sockfd, resp,(int)MAXLINEA);
+                }
+                else if (strcmp( ptr[1], "OFF") == 0) {
+                    // llamar a comando luces apagar
+                    printf("llamar a comando riego apagar\n");
+                    enviar( sockfd, "RIEGO OFF", 10 );
+                    recibirRespuesta( sockfd, resp,(int)MAXLINEA);
+                }
+                else if (strcmp( ptr[1], "PROG" ) == 0){
+                    if (cp == 5) {
+                        int h = atoi( ptr[2] );
+                        int m = atoi( ptr[3] );
+                        int d = atoi( ptr[4] );
+                        // llamar a comando programar luces
+                        printf("llamar a comando programar riego\n");
+                        enviar( sockfd, "RIEGO PROG", 10 );
+                        recibirRespuesta( sockfd, resp,(int)MAXLINEA);
+                    }
+                    else {
+                        printf( "Riego PROG incorrecto\n");
+                        opt = 6;
+                    } 
                 }
                 else {
-                    printf( "Riego PROG incorrecto\n");
-                    opt = 6;
+                    // comando invalido
+                    printf( "comando invalido \n");
                 }
-                
             }
             else {
-                // comando invalido
-                printf( "comando invalido \n");
+                printf( "Error Luces\n");
             }
             break;
         
@@ -232,21 +243,14 @@ int recibirRespuesta( int dcon, char *msg, int len ) {
 
 
 int separarPalabras( char *cadena, char ***aaargs ){
-    //char cadena[] = "Esto es un texto. Puede ir separado por puntos, espacios o comas.",
     char delimitador[] = " \t\n";
     char **aargs;
     char *tmp;
     int num=0;
     int i;
     
-    //Aca falla cuando analiza el 2do comando
-    //comando = 
-    //corrupted size vs. prev_size
-    //Abortado (`core' generado)
     aargs=malloc(sizeof(char**));
-
     tmp = strtok(cadena, delimitador);
-    
     do {
         aargs[num]=malloc(sizeof(char*));
 
