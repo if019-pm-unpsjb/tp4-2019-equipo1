@@ -97,8 +97,8 @@ int principal( FILE *fp, int sockfd ) {
 		msg[ strlen( msg ) -1 ] = '\0';
         char **ptr;
         //separarPalabras( msg, ptr );
-        analizar( msg, sockfd );
-        //if (i < 0)
+        //lo cambie para que el cliente se mantenga abierto
+        if (resultado=analizar( msg, sockfd ) < 0)
             exit(0);  
 	}
 }
@@ -239,7 +239,10 @@ int separarPalabras( char *cadena, char ***aaargs ){
     int num=0;
     int i;
     
-    
+    //Aca falla cuando analiza el 2do comando
+    //comando = 
+    //corrupted size vs. prev_size
+    //Abortado (`core' generado)
     aargs=malloc(sizeof(char**));
 
     tmp = strtok(cadena, delimitador);
