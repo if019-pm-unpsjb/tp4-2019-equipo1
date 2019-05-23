@@ -61,7 +61,6 @@ int main ( int argc, char *argv[] ) {
 	printf( "Proceso cliente finalizado.\n" );
 	exit( 0 );
     return 0;
-
 }
 
 /*-------------------------------------------------------------------------
