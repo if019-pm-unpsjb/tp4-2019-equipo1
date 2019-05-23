@@ -96,19 +96,12 @@ int principal( FILE *fp, int sockfd ) {
 	while( fgets( msg, MAXLINEA, fp ) != NULL ) {
 		msg[ strlen( msg ) -1 ] = '\0';
         char **ptr;
-<<<<<<< HEAD
-        //separarPalabras( msg, ptr );
-        //lo cambie para que el cliente se mantenga abierto
-        if (resultado=analizar( msg, sockfd ) < 0)
-            exit(0);  
-=======
         if (analizar( msg, sockfd, respuesta ) == -1)
             return 0; 
         printf( "Presione una tecla para continuar.... ");
         getchar();
         system("clear");
         printf( "Comandos: \n1) Luces ON/OFF/PROG Hora Minuto Duracion\n2) Riego ON/OFF/PROG Hora Minuto Duracion\n3) Imagen Portero\n4) Contestar llamanda\n5) Salir\nIngrese opcion:  "); 
->>>>>>> 2f292b02facca3922c5ca515b4c6a7b2d93c1ca1
 	}
 }
 
@@ -194,7 +187,7 @@ int analizar( char *in, int sockfd, char *resp ) {
                 }
             }
             else {
-                printf( "Error Luces\n");
+                printf( "Error Riego\n");
             }
             break;
         
@@ -208,7 +201,7 @@ int analizar( char *in, int sockfd, char *resp ) {
         
         case 5:
             printf( "Salir.....\n");
-            opt = -1;
+            return -1;
             break;
         default:
             printf( "Opcion Incorrecta\n" );
@@ -249,7 +242,9 @@ int separarPalabras( char *cadena, char ***aaargs ){
     int num=0;
     int i;
     
+    printf("************* separarPalabras\n ");
     aargs=malloc(sizeof(char**));
+    printf("************* separarPalabras 2\n ");
     tmp = strtok(cadena, delimitador);
     do {
         aargs[num]=malloc(sizeof(char*));

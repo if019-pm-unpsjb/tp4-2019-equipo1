@@ -14,8 +14,8 @@ void *atenderPeticion( void *d ) {
 	int total;	
 	char *ret;
 	char *msg = (char*)malloc( sizeof( MAXLINEA + 1 ) );
-		
-   	while ( total = recibir( *((int *)d), msg ) > 0 ) {
+	int sock = (int)d;
+   	while ( total = recibir( sock, msg ) > 0 ) {
 		printf( "(%5d) Recibido: %s\n", getpid(), msg );
 		
 		/*-------------------------------------------------------* 
@@ -26,14 +26,13 @@ void *atenderPeticion( void *d ) {
 		/*-------------------------------------------------------* 
 	 	* Responder petición		      					
 		*-------------------------------------------------------*/
-		if ( ( total = enviar( *((int *)d), msg ) ) < 0 ) { 
+		if ( ( total = enviar( sock, msg ) ) < 0 ) { 
 			perror("ERROR ENVIAR: ");
 			exit(-1);
 		}
 		printf("(%5d) Respuesta enviada: %s.\n", getpid(), msg );
 	}
-	strcpy( ret, "OK" );
-	pthread_exit( ret );
+
 }
 
 int main ( int argc, char *argv[] ) {
@@ -78,7 +77,7 @@ int main ( int argc, char *argv[] ) {
 			exit(-1);
 		}
 		
-		pthread_create( &t_hijo, NULL, atenderPeticion, (void *)&ndescriptor );
+		pthread_create( &t_hijo, NULL, atenderPeticion, (void *)ndescriptor );
 
 		//pthread_join( t_hijo, NULL );
 	}
@@ -103,6 +102,9 @@ int inicializar( int puerto ) {
 	dir_srv.sin_family = AF_INET;	/* utilizará familia de protocolos de Internet */
 	dir_srv.sin_addr.s_addr = htonl( INADDR_ANY );		/* sobre la dirección IP local */
 	dir_srv.sin_port = htons( puerto );
+
+	int opt = 1;
+	setsockopt( sockfd, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof( opt ));
 
 	if ( bind( sockfd, (struct sockaddr *) &dir_srv, sizeof( dir_srv ) ) < 0 )
 		return ( -2 );
