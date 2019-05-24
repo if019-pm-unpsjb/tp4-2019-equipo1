@@ -57,7 +57,7 @@ int main ( int argc, char *argv[] ) {
 	 *---------------------------------------------------------------------*/
     
     printf( "Cerrando conexion....\n");
-	//close( descriptor );
+	close( descriptor );
 	printf( "Proceso cliente finalizado.\n" );
 
     return 1;

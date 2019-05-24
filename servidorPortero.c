@@ -10,13 +10,14 @@
 #include "servidorPortero.h"
 
 void *atenderPeticion( void *d ) {
-	printf( "(%5d) Atendiendo petición.\n", getpid() );
+	printf( "(%5ld) Atendiendo petición.\n", pthread_self() );
 	int total;	
-	char *ret;
-	char *msg = (char*)malloc( sizeof( MAXLINEA + 1 ) );
+
+	char *msg;
+	msg = (char*)malloc(MAXLINEA);
 	int sock = (int)d;
    	while ( total = recibir( sock, msg ) > 0 ) {
-		printf( "(%5d) Recibido: %s\n", getpid(), msg );
+		printf( "(%5ld) Recibido: %s\n", pthread_self(), msg );
 		
 		/*-------------------------------------------------------* 
 		* Realizar la tarea específica del servicio
@@ -30,15 +31,14 @@ void *atenderPeticion( void *d ) {
 			perror("ERROR ENVIAR: ");
 			exit(-1);
 		}
-		printf("(%5d) Respuesta enviada: %s.\n", getpid(), msg );
+		printf("(%5ld) Respuesta enviada: %s.\n", pthread_self(), msg );
 	}
-
 }
 
 int main ( int argc, char *argv[] ) {
 
     //char *msg;
-	int descriptor, ndescriptor, total, pid_hijo;
+	int descriptor, ndescriptor, total, pid_hilo;
 	pthread_t t_hijo;
 
 	
@@ -163,7 +163,8 @@ int recibir( int nsockfd, char *msg ) {
 		close( nsockfd );
 		return ( -2 );
 	}
- 	printf( "comando = %s\n", msg );
+ 	if (longitud > 0) 
+		printf( "comando = %s\n", msg );
 	return ( longitud );
 }
 
@@ -171,5 +172,5 @@ int recibir( int nsockfd, char *msg ) {
  * procesar() - atender una petición
  *-----------------------------------------------------------------------*/
 void procesar( char *mensaje ) {
-	printf ( "(%5d) Procesando: %s \n", getpid(), mensaje );
+	printf ( "(%5ld) Procesando: %s \n", pthread_self(), mensaje );
 }
