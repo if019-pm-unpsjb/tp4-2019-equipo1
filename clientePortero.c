@@ -12,6 +12,7 @@
 #include <stdlib.h>
 
 #include "clientePortero.h"
+#include "porteroUtils.h"
 
 /* cambios */
 
@@ -233,35 +234,4 @@ int recibirRespuesta( int dcon, char *msg, int len ) {
 	}
  	printf( "recibido = %s\n", msg );
 	return ( longitud );
-}
-
-
-int separarPalabras( char *cadena, char ***aaargs ){
-    char delimitador[] = " \t\n";
-    char **aargs;
-    char *tmp;
-    int num=0;
-    int i;
-    
-    printf("************* separarPalabras\n ");
-    aargs=malloc(sizeof(char**));
-    printf("************* separarPalabras 2\n ");
-    tmp = strtok(cadena, delimitador);
-    do {
-        aargs[num]=malloc(sizeof(char*));
-
-        /*       strcpy(aargs[num], tmp); */
-        aargs[num]=tmp;
-        num++;
-
-        /* Reservamos memoria para una palabra más */
-        aargs=realloc(aargs, sizeof(char**)*(num+1));
-
-        /* Extraemos la siguiente palabra */
-        tmp = strtok(NULL, delimitador);
-    } while (tmp!=NULL);  
-
-    *aaargs = aargs;
-
-    return num;
 }
