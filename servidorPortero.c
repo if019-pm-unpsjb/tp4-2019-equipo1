@@ -8,6 +8,7 @@
 #include <pthread.h>
 
 #include "servidorPortero.h"
+#include "porteroUtils.h"
 
 void *atenderPeticion( void *d ) {
 	printf( "(%5ld) Atendiendo petición.\n", pthread_self() );
@@ -81,8 +82,6 @@ int main ( int argc, char *argv[] ) {
 
 		//pthread_join( t_hijo, NULL );
 	}
-
-    return 1;
 }
 
 
@@ -112,9 +111,6 @@ int inicializar( int puerto ) {
 	/* armar una lista de espera para MAXCLI clientes */	
 	listen( sockfd, MAXCLIENTES );
 	
-	/* mostrar un mensaje con los datos del socket de escucha.
-	 * Sólo para ver qué está haciendo. Esta función no debería mostrar salida por pantalla.
-	 */
 	printf ( "\n\tEscuchando en puerto: %d, dirección %d. \n\tPodría tener hasta %d clientes esperando.\n", 
 		ntohs( dir_srv.sin_port ), ntohl( dir_srv.sin_addr.s_addr ), MAXCLIENTES );
 	
@@ -172,5 +168,26 @@ int recibir( int nsockfd, char *msg ) {
  * procesar() - atender una petición
  *-----------------------------------------------------------------------*/
 void procesar( char *mensaje ) {
+	tConfig config;
+	char **palabras;
+	int cp;
 	printf ( "(%5ld) Procesando: %s \n", pthread_self(), mensaje );
+	cp = separarPalabras( mensaje, &palabras );
+	if (strcmp( palabras[1], "PROG" ) == 0) {
+		cargarConfig( &config );
+		if (strcmp( palabras[0], "1") == 0) {
+			//config.luces = "LUCES";
+			config.hluces = atoi( palabras[2] );
+			config.mluces = atoi( palabras[3] );
+			config.dluces = atoi( palabras[4] );
+		}
+		else if (strcmp( palabras[0], "2") == 0) {
+			//config.riego = "RIEGO";
+			config.hriego = atoi( palabras[2] );
+			config.mriego = atoi( palabras[3] );
+			config.driego = atoi( palabras[4] );
+		}
+		guardarConfig( &config );
+	}
+ 	
 }

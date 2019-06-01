@@ -110,7 +110,9 @@ int analizar( char *in, int sockfd, char *resp ) {
     char **ptr;
     int cp;
     int ret=0;
-    cp = separarPalabras( in, &ptr );
+    char cadenain[MAXLINEA];
+    strcpy( cadenain, in );
+    cp = separarPalabras( cadenain, &ptr );
     int opt = (int)atoi( ptr[0] );
     //char *m = (char*)malloc( sizeof( MAXLINEA + 1 ) );
     switch (opt)
@@ -119,24 +121,21 @@ int analizar( char *in, int sockfd, char *resp ) {
             if (cp >= 2) {
                 if (strcmp( ptr[1], "ON") == 0) {
                     // llamar a comando luces prender
-                    printf( "llamar a comando luces prender\n");
-                    enviar( sockfd, "LUCES ON", 8 );
+                    printf( "llamar a comando luces prender cadena: %s, long:%ld \n", in, strlen( in));
+                    enviar( sockfd, in, strlen( in ) );
                     recibirRespuesta( sockfd, resp, (int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "OFF") == 0) {
                     // llamar a comando luces apagar
                     printf("llamar a comando luces apagar\n");
-                    enviar( sockfd, "LUCES OFF", 9 );
+                    enviar( sockfd, in, strlen( in ) );
                     recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "PROG" ) == 0){
                     if (cp == 5) {
-                        int h = atoi( ptr[2] );
-                        int m = atoi( ptr[3] );
-                        int d = atoi( ptr[4] );
                         // llamar a comando programar luces
                         printf("llamar a comando programar luces\n");
-                        enviar( sockfd, "LUCES PROG", 10 );
+                        enviar( sockfd, in, strlen( in ) );
                         recibirRespuesta( sockfd, resp, (int)MAXLINEA);
                     }
                     else {
@@ -150,7 +149,7 @@ int analizar( char *in, int sockfd, char *resp ) {
                 }
             }
             else {
-                printf( "Error Luces\n");
+                printf( "Error Luces\nUso: 1 [OFF|ON|PROG hora minutos duracion] ");
             }
             break;
         
@@ -159,23 +158,20 @@ int analizar( char *in, int sockfd, char *resp ) {
                 if (strcmp( ptr[1], "ON") == 0) {
                     // llamar a comando luces prender
                     printf( "llamar a comando riego prender\n");
-                    enviar( sockfd, "RIEGO ON", 8 );
+                    enviar( sockfd, in, strlen( in ) );
                     recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "OFF") == 0) {
                     // llamar a comando luces apagar
                     printf("llamar a comando riego apagar\n");
-                    enviar( sockfd, "RIEGO OFF", 10 );
+                    enviar( sockfd, in, strlen( in ) );
                     recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "PROG" ) == 0){
                     if (cp == 5) {
-                        int h = atoi( ptr[2] );
-                        int m = atoi( ptr[3] );
-                        int d = atoi( ptr[4] );
                         // llamar a comando programar luces
                         printf("llamar a comando programar riego\n");
-                        enviar( sockfd, "RIEGO PROG", 10 );
+                        enviar( sockfd, in, strlen( in ) );
                         recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                     }
                     else {
@@ -189,7 +185,7 @@ int analizar( char *in, int sockfd, char *resp ) {
                 }
             }
             else {
-                printf( "Error Riego\n");
+                printf( "Error Riego\nUso: 2 [OFF|ON|PROG hora minutos duracion]");
             }
             break;
         
