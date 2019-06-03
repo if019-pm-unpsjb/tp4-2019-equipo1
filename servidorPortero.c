@@ -55,11 +55,6 @@ void *atenderPeticionUDP( void *d ) {
 }
 
 int main ( int argc, char *argv[] ) {
-	int pid_hiloTCP, pid_hiloUDP;
-
-	pid_hiloTCP=1000;
-	pid_hiloUDP=5000;
-	
 	/*---------------------------------------------------------------------*
 	 * Verificar los argumentos
 	 *---------------------------------------------------------------------*/
