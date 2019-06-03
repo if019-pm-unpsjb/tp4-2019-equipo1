@@ -38,18 +38,18 @@ void *atenderPeticionTCP( void *d ) {
 }
 
 void *atenderPeticionUDP( void *d ) {
-	struct sockaddr_in dir_cli;
+	struct sockaddr_in dir_cli, dir_cli_p;
 	int recibido;
 	socklen_t longitud;
 	char msg[ MAXLINEA ];
 	int sockUDP = (int)d;
 
 	for(;;) {
-	 longitud = sizeof( dir_cli );
-	 recibido = recvfrom( sockUDP, msg, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud );
-	 //Codigo para atender UDP
-	 //sendto( sockUDP, msg, recibido, 0, dir_cli_p, longitud );
-	 printf("[%d] %d Bytes recibidos, Comando: %s\n ",sockUDP, recibido, msg);
+		longitud = sizeof( dir_cli );
+	 	recibido = recvfrom( sockUDP, msg, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud );
+	 	//Codigo para atender UDP
+	 	//sendto( sockUDP, msg, recibido, 0, (struct sockaddr *) &dir_cli_p, longitud );
+	 	printf("[%ld] %d Bytes recibidos, Comando: %s\n ",sockUDP, recibido, msg);
 	}
 	
 }
@@ -87,11 +87,16 @@ int main ( int argc, char *argv[] ) {
 int inicializar( int puerto ) {
 	int sock_TCP, sock_UDP;
 	int ndescriptor;
+	int ldescriptorUDP;
 	int opt = 1;  			//Opcion para reusar el puerto: setsockopt
 	
-	pthread_t t_hijoTCP;
-	pthread_t t_hijoUDP;
-	struct sockaddr_in dir_srv;
+	pthread_t t_hijoTCP;	//Estructura para atenderPeticionTCP	
+	pthread_t t_hijoUDP;	//Estructura para atenderPeticionUDP
+	struct sockaddr_in dir_srv, dir_cli;
+
+	int recibido;
+	socklen_t longitud;
+	char msg[ MAXLINEA ];
 	
 	/*--------------------------------------------------------------------* 
 	 * Inicializar el servidor TCP                          			  *
@@ -133,17 +138,17 @@ int inicializar( int puerto ) {
 	printf ( "\n\tEscuchando en puerto: %d, dirección %d. \n\tPodría tener hasta %d clientes esperando.\n", ntohs( dir_srv.sin_port ), ntohl( dir_srv.sin_addr.s_addr ), MAXCLIENTES );
 	printf( "Servidor inicializado.\n" );
 	
-	/*
+	/*----------------------------------------------------------------* 
 	 * Comenzar tarea del servidor UDP
-	 */
+	 *----------------------------------------------------------------*/
 	pthread_create( &t_hijoUDP, NULL, atenderPeticionUDP, (void *)sock_UDP );
-	/*
+	/*----------------------------------------------------------------*
 	 * Comenzar tarea del servidor TCP
-	 */
-	while ( 1 ) { 
-		/*----------------------------------------------------------------* 
+	 *----------------------------------------------------------------*/
+	for(;;) { 
+		/* 
 	 	 * Esperar una petición
-	 	 *----------------------------------------------------------------*/
+	 	 */
 		printf( "Esperando petición (Padre).\n" );
 		if ( ( ndescriptor = esperar(sock_TCP) ) < 0 ) {
 			printf("ERROR ESPERANDO: ");
@@ -151,8 +156,6 @@ int inicializar( int puerto ) {
 		}
 		
 		pthread_create( &t_hijoTCP, NULL, atenderPeticionTCP, (void *)ndescriptor );
-
-		//pthread_join( t_hijo, NULL );
 	}
 
 	return ( 1 );
