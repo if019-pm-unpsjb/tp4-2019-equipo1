@@ -11,6 +11,8 @@
 #include "servidorPortero.h"
 #include "porteroUtils.h"
 
+static pthread_mutex_t filelock = PTHREAD_MUTEX_INITIALIZER;
+
 void *atenderPeticionTCP( void *d ) {
 	int total;	
 	char msg[ MAXLINEA ];
@@ -152,7 +154,7 @@ int inicializar( int puerto ) {
 		
 		pthread_create( &t_hijoTCP, NULL, atenderPeticionTCP, (void *)ndescriptor );
 	}
-
+    pthread_mutex_destroy( &filelock );
 	return ( 1 );
 }
 
@@ -213,6 +215,8 @@ void procesar( char *mensaje, int socketTCP ) {
 	printf ( "(%d) Procesando: %s \n", socketTCP, mensaje );
 	cp = separarPalabras( mensaje, &palabras );
 	if (strcmp( palabras[1], "PROG" ) == 0) {
+        // bloquea el acceso al archivo
+        pthread_mutex_lock( &filelock );
 		cargarConfig( &config );
 		if (strcmp( palabras[0], "1") == 0) {
 			//config.luces = "LUCES";
@@ -227,6 +231,8 @@ void procesar( char *mensaje, int socketTCP ) {
 			config.driego = atoi( palabras[4] );
 		}
 		guardarConfig( &config );
+        // finaliza acceso a archivo y desbloquea
+        pthread_mutex_unlock( &filelock );
 	}
  	
 }
