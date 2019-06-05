@@ -2,18 +2,20 @@
 #define MAXLINEA 50
 
 
-void procesar( char *mensaje, int socketTCP );
+void procesarTCP( char *mensaje, int socketTCP );
+void procesarUDP( char *mensaje, int socketUDP, int recibido );
 int inicializar( int puerto );
 int esperar( int desc_con );
 int enviar( int desc_con, char *msg );
 int recibir( int desc_con, char *msg );
 
-void atenderLuces( );
-
-void atenderRiego();
-
+void atenderLuces(char *hacer, int hora, int minutos, int duracion);
+void atenderRiego(char *hacer, int hora, int minutos, int duracion);
 void atenderPortero();
-
 void atenderImagen();
+void atenderLlamada(char *mensaje, int socketUDP, int recibido);
 
-void atenderLlamda();
+/* ************************************************************
+* ******** COMANDOS 
+* *************************************************************/
+typedef enum {NA,LUCES,RIEGO,IMAGEN,LLAMADA,EXIT} tipoComando;

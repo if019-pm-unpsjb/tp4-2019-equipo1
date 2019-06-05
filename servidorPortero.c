@@ -19,12 +19,12 @@ void *atenderPeticionTCP( void *d ) {
 	
    	printf( "(%d) Atendiendo petición.\n", sockTCP );
 	while ( total = recibir( sockTCP, msg ) > 0 ) {
-		printf( "(%d) Recibido: %s\n", sockTCP, msg );
+		//printf( "(%d) Recibido: %s\n", sockTCP, msg );
 		
 		/*-------------------------------------------------------* 
 		* Realizar la tarea específica del servicio
 		*-------------------------------------------------------*/
-		procesar( msg, sockTCP );
+		procesarTCP( msg, sockTCP );
 	
 		/*-------------------------------------------------------* 
 	 	* Responder petición		      					
@@ -33,7 +33,7 @@ void *atenderPeticionTCP( void *d ) {
 			perror("(%d) ERROR ENVIAR TCP: ");
 			exit(-1);
 		}
-		printf("(%d) Respuesta enviada: %s.\n", sockTCP, msg );
+		//printf("(%d) Respuesta enviada: %s.\n", sockTCP, msg );
 	}
 }
 
@@ -46,10 +46,16 @@ void *atenderPeticionUDP( void *d ) {
 
 	for(;;) {
 		longitud = sizeof( dir_cli );
-	 	recibido = recvfrom( sockUDP, msg, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud );
-	 	//Codigo para atender UDP
-	 	//sendto( sockUDP, msg, recibido, 0, (struct sockaddr *) &dir_cli_p, longitud );
-	 	printf("[%ld] %d Bytes recibidos, Comando: %s\n ",sockUDP, recibido, msg);
+	 	// Recibo el comando del cliente
+		recibido = recvfrom( sockUDP, msg, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud );
+	 	
+		/*-------------------------------------------------------* 
+		* Procesa el comando recibido y envia respuesta al cliente
+		*-------------------------------------------------------*/
+		 procesarUDP( msg, sockUDP, recibido );
+	
+	 	
+	 
 	}
 	
 }
@@ -197,36 +203,120 @@ int recibir( int nsockfd, char *msg ) {
 		close( nsockfd );
 		return ( -2 );
 	}
- 	if (longitud > 0) 
-		printf( "comando = %s\n", msg );
+ 	//if (longitud > 0) 
+	//	printf( "comando = %s\n", msg );
 	return ( longitud );
 }
 
 /*-----------------------------------------------------------------------* 
- * procesar() - atender una petición
+ * procesarTCP() - atender una petición
  *-----------------------------------------------------------------------*/
-void procesar( char *mensaje, int socketTCP ) {
-	tConfig config;
-	char **palabras;
+void procesarTCP( char *mensaje, int socketTCP ) {
+	char **comando;
 	int cp;
+	int hora, minutos, duracion;
+	char resp[MAXLINEA];
 
-	printf ( "(%d) Procesando: %s \n", socketTCP, mensaje );
-	cp = separarPalabras( mensaje, &palabras );
-	if (strcmp( palabras[1], "PROG" ) == 0) {
-		cargarConfig( &config );
-		if (strcmp( palabras[0], "1") == 0) {
-			//config.luces = "LUCES";
-			config.hluces = atoi( palabras[2] );
-			config.mluces = atoi( palabras[3] );
-			config.dluces = atoi( palabras[4] );
-		}
-		else if (strcmp( palabras[0], "2") == 0) {
-			//config.riego = "RIEGO";
-			config.hriego = atoi( palabras[2] );
-			config.mriego = atoi( palabras[3] );
-			config.driego = atoi( palabras[4] );
-		}
-		guardarConfig( &config );
+	printf ( "(%d) Procesando comando: %s \n", socketTCP, mensaje );
+	cp = separarPalabras( mensaje, &comando );
+	
+	if (cp == 5){						//Si es PROG
+		hora = atoi(comando[2]);
+		minutos = atoi(comando[3]);
+		duracion = atoi(comando[4]);
+	}else{								//Si es ON | OFF	
+		hora = -1;
+		minutos = -1;
+		duracion = -1;
 	}
- 	
+	
+	switch (atoi(comando[0]))
+	{
+		case LUCES:
+			atenderLuces(comando[1], hora, minutos, duracion);
+			break;
+		case RIEGO:
+			atenderRiego(comando[1], hora, minutos, duracion);
+			break;
+		case IMAGEN:
+			atenderImagen();
+			break;
+		case LLAMADA:
+			//No atiendo este comando, lo atiende procesarUDP
+			
+			break;
+		case EXIT:
+			break;
+		default:
+			break;
+	}	
+}
+
+/*-----------------------------------------------------------------------* 
+ * procesarUDP() - Solo ejecuta la funcion de transferencia de audio
+ *-----------------------------------------------------------------------*/
+void procesarUDP( char *mensaje, int socketUDP, int recibido ) {
+	
+	atenderLlamada(mensaje, socketUDP, recibido);
+}
+
+/*-----------------------------------------------------------------------* 
+ * atenderLuces() - ejecuta el comando LUCES ON | OFF | PROG
+ *-----------------------------------------------------------------------*/
+void atenderLuces(char *hacer, int hora, int minutos, int duracion){
+	tConfig config;
+	pthread_mutex_t mutex;
+
+	if (strcmp( hacer, "PROG" ) == 0) {			// PROG
+		pthread_mutex_init(&mutex,NULL);		//-----------------
+		cargarConfig( &config );				//-----------------
+		//config.luces = "LUCES";				//-----------------
+		config.hluces = hora;					// Zona Critica
+		config.mluces = minutos;				//-----------------
+		config.dluces = duracion;				//-----------------
+		guardarConfig( &config );				//-----------------
+		pthread_mutex_unlock(&mutex);			//-----------------
+	} else if (strcmp(hacer, "ON") == 0) {		// ON
+		// Codigo para prender luces
+		
+	} else {									// OFF
+		// Codigo para apagar luces
+		
+	}
+
+}
+
+/*-----------------------------------------------------------------------* 
+ * atenderRiego() - ejecuta el comando LUCES ON | OFF | PROG
+ *-----------------------------------------------------------------------*/
+void atenderRiego(char *hacer, int hora, int minutos, int duracion){
+	tConfig config;
+	pthread_mutex_t mutex;
+
+	if (strcmp( hacer, "PROG" ) == 0) {			// PROG
+		pthread_mutex_lock(&mutex,NULL);		//-----------------
+		cargarConfig( &config );				//-----------------
+		//config.luces = "LUCES";				//-----------------
+		config.hriego = hora;					// Zona Critica
+		config.mriego = minutos;				//-----------------
+		config.driego = duracion;				//-----------------
+		guardarConfig( &config );				//-----------------
+		pthread_mutex_unlock(&mutex);			//-----------------
+	}else if (strcmp(hacer, "ON") == 0) {		// ON
+		// Codigo para prender riego
+		
+	}else{										// OFF
+		// Codigo para apagar riego
+		
+	}
+}
+
+void atenderImagen(){
+
+}
+
+void atenderLlamada(char *mensaje, int socketUDP, int recibido){
+	
+	printf("[%ld] %d Bytes recibidos, Comando: %s\n ",socketUDP, recibido, mensaje);
+	
 }
