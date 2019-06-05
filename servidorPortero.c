@@ -12,6 +12,8 @@
 #include "porteroUtils.h"
 
 static pthread_mutex_t filelock = PTHREAD_MUTEX_INITIALIZER;
+static int ESTADO_LUCES = 0;
+static int ESTADO_RIEGO = 0;
 
 void *atenderPeticionTCP( void *d ) {
 	int total;	
@@ -48,6 +50,7 @@ void *atenderPeticionUDP( void *d ) {
 
 	for(;;) {
 		longitud = sizeof( dir_cli );
+        bzero( msg,MAXLINEA );
 	 	// Recibo el comando del cliente
 		recibido = recvfrom( sockUDP, msg, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud );
 	 	
@@ -123,8 +126,9 @@ int inicializar( int puerto ) {
 	setsockopt( sock_UDP, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof( opt ));
 
 	// bind TCP
-	if ( bind( sock_TCP, (struct sockaddr *) &dir_srv, sizeof( dir_srv ) ) < 0 ){
-		printf("ERROR BIND TCP:\n");
+    int b;
+	if ((b=bind( sock_TCP, (struct sockaddr *) &dir_srv, sizeof( dir_srv ) )) < 0 ){
+		printf("ERROR BIND TCP:%d\n", b);
 		exit ( -2 );
 	}
 	// bind UDP
@@ -233,10 +237,10 @@ void procesarTCP( char *mensaje, int socketTCP ) {
 	switch (atoi(comando[0]))
 	{
 		case LUCES:
-			atenderLuces(comando[1], hora, minutos, duracion);
+			atenderLuces(comando[1], hora, minutos, duracion, mensaje );
 			break;
 		case RIEGO:
-			atenderRiego(comando[1], hora, minutos, duracion);
+			atenderRiego(comando[1], hora, minutos, duracion, mensaje );
 			break;
 		case IMAGEN:
 			atenderImagen();
@@ -263,7 +267,7 @@ void procesarUDP( char *mensaje, int socketUDP, int recibido ) {
 /*-----------------------------------------------------------------------* 
  * atenderLuces() - ejecuta el comando LUCES ON | OFF | PROG
  *-----------------------------------------------------------------------*/
-void atenderLuces(char *hacer, int hora, int minutos, int duracion){
+void atenderLuces(char *hacer, int hora, int minutos, int duracion, char *respuesta ){
 	tConfig config;
 
 	if (strcmp( hacer, "PROG" ) == 0) {			// PROG
@@ -273,22 +277,33 @@ void atenderLuces(char *hacer, int hora, int minutos, int duracion){
 		config.hluces = hora;					// Zona Critica
 		config.mluces = minutos;				//-----------------
 		config.dluces = duracion;				//-----------------
-		guardarConfig( &config );				//-----------------
+		guardarConfig( &config );	
+        respuesta = "Luces Programadas";		//-----------------
 		pthread_mutex_unlock(&filelock);		//-----------------
 	} else if (strcmp(hacer, "ON") == 0) {		// ON
-		// Codigo para prender luces
-		
-	} else {									// OFF
-		// Codigo para apagar luces
-		
-	}
+		if (ESTADO_LUCES == 0) {
+            ESTADO_LUCES = 1;
+            respuesta = "Luces prendidas";
+        }
+        else {
+            respuesta = "Luces ya estan prendidas";
+        }
+	} else if (strcmp(hacer, "OFF") == 0) {		// OFF
+		if (ESTADO_LUCES == 1) {
+            ESTADO_LUCES = 0;
+            respuesta = "Luces apagadas";
+        }
+        else {
+            respuesta = "Luces ya estan apagadas";
+        }
+    }
 
 }
 
 /*-----------------------------------------------------------------------* 
  * atenderRiego() - ejecuta el comando LUCES ON | OFF | PROG
  *-----------------------------------------------------------------------*/
-void atenderRiego(char *hacer, int hora, int minutos, int duracion){
+void atenderRiego(char *hacer, int hora, int minutos, int duracion, char *respuesta ){
 	tConfig config;
 
 	if (strcmp( hacer, "PROG" ) == 0) {			// PROG
@@ -298,15 +313,26 @@ void atenderRiego(char *hacer, int hora, int minutos, int duracion){
 		config.hriego = hora;					// Zona Critica
 		config.mriego = minutos;				//-----------------
 		config.driego = duracion;				//-----------------
-		guardarConfig( &config );				//-----------------
+		guardarConfig( &config );
+        respuesta = "Riego programado";				//-----------------
 		pthread_mutex_unlock(&filelock);		//-----------------
 	}else if (strcmp(hacer, "ON") == 0) {		// ON
-		// Codigo para prender riego
-		
-	}else{										// OFF
-		// Codigo para apagar riego
-		
-	}
+		if (ESTADO_RIEGO == 0) {
+            ESTADO_RIEGO = 1;
+            respuesta = "Riego encendido";
+        }
+        else {
+            respuesta = "Riego ya se encuentra encendido";
+        }
+	} else if (strcmp(hacer, "OFF") == 0) {		// OFF
+		if (ESTADO_RIEGO == 1) {
+            ESTADO_RIEGO = 0;
+            respuesta = "Riego apagado";
+        }
+        else {
+            respuesta = "Riego ya se encuentra apagado";
+        }  
+    } 
 }
 
 void atenderImagen(){
