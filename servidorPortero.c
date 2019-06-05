@@ -11,6 +11,8 @@
 #include "servidorPortero.h"
 #include "porteroUtils.h"
 
+static pthread_mutex_t filelock = PTHREAD_MUTEX_INITIALIZER;
+
 void *atenderPeticionTCP( void *d ) {
 	int total;	
 	char msg[ MAXLINEA ];
@@ -53,8 +55,6 @@ void *atenderPeticionUDP( void *d ) {
 		* Procesa el comando recibido y envia respuesta al cliente
 		*-------------------------------------------------------*/
 		 procesarUDP( msg, sockUDP, recibido );
-	
-	 	
 	 
 	}
 	
@@ -158,7 +158,7 @@ int inicializar( int puerto ) {
 		
 		pthread_create( &t_hijoTCP, NULL, atenderPeticionTCP, (void *)ndescriptor );
 	}
-
+    pthread_mutex_destroy( &filelock );
 	return ( 1 );
 }
 
@@ -265,17 +265,16 @@ void procesarUDP( char *mensaje, int socketUDP, int recibido ) {
  *-----------------------------------------------------------------------*/
 void atenderLuces(char *hacer, int hora, int minutos, int duracion){
 	tConfig config;
-	pthread_mutex_t mutex;
 
 	if (strcmp( hacer, "PROG" ) == 0) {			// PROG
-		pthread_mutex_init(&mutex,NULL);		//-----------------
+		pthread_mutex_lock(&filelock);			//-----------------
 		cargarConfig( &config );				//-----------------
 		//config.luces = "LUCES";				//-----------------
 		config.hluces = hora;					// Zona Critica
 		config.mluces = minutos;				//-----------------
 		config.dluces = duracion;				//-----------------
 		guardarConfig( &config );				//-----------------
-		pthread_mutex_unlock(&mutex);			//-----------------
+		pthread_mutex_unlock(&filelock);		//-----------------
 	} else if (strcmp(hacer, "ON") == 0) {		// ON
 		// Codigo para prender luces
 		
@@ -291,17 +290,16 @@ void atenderLuces(char *hacer, int hora, int minutos, int duracion){
  *-----------------------------------------------------------------------*/
 void atenderRiego(char *hacer, int hora, int minutos, int duracion){
 	tConfig config;
-	pthread_mutex_t mutex;
 
 	if (strcmp( hacer, "PROG" ) == 0) {			// PROG
-		pthread_mutex_lock(&mutex,NULL);		//-----------------
+		pthread_mutex_lock(&filelock);			//-----------------
 		cargarConfig( &config );				//-----------------
 		//config.luces = "LUCES";				//-----------------
 		config.hriego = hora;					// Zona Critica
 		config.mriego = minutos;				//-----------------
 		config.driego = duracion;				//-----------------
 		guardarConfig( &config );				//-----------------
-		pthread_mutex_unlock(&mutex);			//-----------------
+		pthread_mutex_unlock(&filelock);		//-----------------
 	}else if (strcmp(hacer, "ON") == 0) {		// ON
 		// Codigo para prender riego
 		
