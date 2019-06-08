@@ -19,3 +19,5 @@ int separarPalabras( char *cad, char ***ptr );
 int recibirRespuesta( int sock, char *m, int len );
 
 int enviar( int sock, char *m, int len );
+
+int validarProgramacion( int hora, int minutos, int duracion );

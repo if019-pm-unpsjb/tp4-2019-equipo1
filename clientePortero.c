@@ -93,16 +93,16 @@ int principal( FILE *fp, int sockfd ) {
 	 * Comandos del cliente 
 	 *---------------------------------------------------------------------*/
     system("clear");
-    printf( "Comandos: \n1) Luces ON/OFF/PROG Hora Minuto Duracion\n2) Riego ON/OFF/PROG Hora Minuto Duracion\n3) Imagen Portero\n4) Contestar llamanda\n5) Salir\nIngrese opcion:  ");
+    printf( "ADMINISTRADOR PORTERO - Comandos: \n--------------------------------\n1) Luces ON/OFF/PROG Hora Minuto Duracion\n2) Riego ON/OFF/PROG Hora Minuto Duracion\n3) Imagen Portero\n4) Contestar llamanda\n5) Salir\n\nIngrese opcion:  ");
 	while( fgets( msg, MAXLINEA, fp ) != NULL ) {
 		msg[ strlen( msg ) -1 ] = '\0';
         char **ptr;
         if (analizar( msg, sockfd, respuesta ) == -1)
             break; 
-        printf( "Presione una tecla para continuar.... ");
+        printf( "\n\nPresione una tecla para continuar.... ");
         getchar();
         system("clear");
-        printf( "Comandos: \n1) Luces ON/OFF/PROG Hora Minuto Duracion\n2) Riego ON/OFF/PROG Hora Minuto Duracion\n3) Imagen Portero\n4) Contestar llamanda\n5) Salir\nIngrese opcion:  "); 
+        printf( "ADMINISTRADOR PORTERO - Comandos: \n--------------------------------\n1) Luces ON/OFF/PROG Hora Minuto Duracion\n2) Riego ON/OFF/PROG Hora Minuto Duracion\n3) Imagen Portero\n4) Contestar llamanda\n5) Salir\n\nIngrese opcion:  ");
 	}
 }
 
@@ -121,31 +121,37 @@ int analizar( char *in, int sockfd, char *resp ) {
             if (cp >= 2) {
                 if (strcmp( ptr[1], "ON") == 0) {
                     // llamar a comando luces prender
-                    printf( "llamar a comando luces prender cadena: %s, long:%ld \n", in, strlen( in));
+                    //printf( "llamar a comando luces prender cadena: %s, long:%ld \n", in, strlen( in));
                     enviar( sockfd, in, strlen( in ) );
                     recibirRespuesta( sockfd, resp, (int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "OFF") == 0) {
                     // llamar a comando luces apagar
-                    printf("llamar a comando luces apagar\n");
+                    //printf("llamar a comando luces apagar\n");
                     enviar( sockfd, in, strlen( in ) );
                     recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "PROG" ) == 0){
                     if (cp == 5) {
                         // llamar a comando programar luces
-                        printf("llamar a comando programar luces\n");
-                        enviar( sockfd, in, strlen( in ) );
-                        recibirRespuesta( sockfd, resp, (int)MAXLINEA);
+                        //printf("llamar a comando programar luces\n");
+                        if (validarProgramacion( atoi( ptr[2] ),atoi( ptr[3] ),atoi( ptr[4] ) ) == -1) {
+                            ret = 6;
+                            printf( "Luces PROG: error valores hora minutos o duracion. Hora: 0-24, minutos: 0-60, duracion: 1-12");   
+                        }
+                        else {
+                            enviar( sockfd, in, strlen( in ) );
+                            recibirRespuesta( sockfd, resp, (int)MAXLINEA);
+                        }
                     }
                     else {
-                        printf( "Luces PROG incorrecto\n");
+                        printf( "Luces PROG incorrecto\nUso: 1 PROG hora minutos duracion");
                         ret = 6;
                     }
                 }
                 else {
                     // comando invalido
-                    printf( "comando invalido \n");
+                    printf( "Error Luces\nUso: 1 [OFF|ON|PROG hora minutos duracion] ");
                 }
             }
             else {
@@ -157,40 +163,48 @@ int analizar( char *in, int sockfd, char *resp ) {
             if (cp >= 2) {
                 if (strcmp( ptr[1], "ON") == 0) {
                     // llamar a comando luces prender
-                    printf( "llamar a comando riego prender\n");
+                    //printf( "llamar a comando riego prender\n");
                     enviar( sockfd, in, strlen( in ) );
                     recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "OFF") == 0) {
                     // llamar a comando luces apagar
-                    printf("llamar a comando riego apagar\n");
+                    //printf("llamar a comando riego apagar\n");
                     enviar( sockfd, in, strlen( in ) );
                     recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "PROG" ) == 0){
                     if (cp == 5) {
                         // llamar a comando programar luces
-                        printf("llamar a comando programar riego\n");
-                        enviar( sockfd, in, strlen( in ) );
-                        recibirRespuesta( sockfd, resp,(int)MAXLINEA);
+                        //printf("llamar a comando programar riego\n");
+                        if (validarProgramacion( atoi( ptr[2] ),atoi( ptr[3] ),atoi( ptr[4] ) ) == -1) {
+                            ret = 6;
+                            printf( "Riego PROG: error valores hora minutos o duracion. Hora: 0-24, minutos: 0-60, duracion: 1-12");   
+                        }
+                        else {
+                            enviar( sockfd, in, strlen( in ) );
+                            recibirRespuesta( sockfd, resp,(int)MAXLINEA);
+                        }
                     }
                     else {
-                        printf( "Riego PROG incorrecto\n");
+                        printf( "Riego PROG incorrecto\nUso: 2 PROG hora minutos duracion");
                         ret = 6;
                     } 
                 }
                 else {
                     // comando invalido
-                    printf( "comando invalido \n");
+                    printf( "Error Riego\nUso: 2 [OFF|ON|PROG hora minutos duracion] ");
                 }
             }
             else {
-                printf( "Error Riego\nUso: 2 [OFF|ON|PROG hora minutos duracion]");
+                printf( "Error Riego\nUso: 2 [OFF|ON|PROG hora minutos duracion] ");
             }
             break;
         
         case 3:
             printf( "Pedir Imagen\n");
+            enviar( sockfd, in, strlen( in ) );
+            recibirRespuesta( sockfd, resp,(int)MAXLINEA);
             break;
 
         case 4: 
@@ -228,6 +242,12 @@ int recibirRespuesta( int dcon, char *msg, int len ) {
 	if ( ( longitud =  read( dcon, msg, (int)MAXLINEA ) ) < 0 ) {
 		return ( -2 );
 	}
- 	printf( "recibido = %s\n", msg );
+ 	printf( "\nrecibido = %s\n", msg );
 	return ( longitud );
+}
+
+int validarProgramacion( int horas, int minutos, int duracion ) {
+    if (horas < 0 || horas > 24 || minutos < 0 || minutos > 60 || duracion < 1 || duracion > 12 )
+        return -1;
+    return 1;
 }
