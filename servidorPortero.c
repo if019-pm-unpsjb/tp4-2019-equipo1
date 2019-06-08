@@ -278,26 +278,26 @@ void atenderLuces(char *hacer, int hora, int minutos, int duracion, char *respue
 		config.mluces = minutos;				//-----------------
 		config.dluces = duracion;				//-----------------
 		guardarConfig( &config );	
-        respuesta = "Luces Programadas";		//-----------------
+        strcpy(respuesta,"Luces Programadas");		//-----------------
 		pthread_mutex_unlock(&filelock);		//-----------------
 	} else if (strcmp(hacer, "ON") == 0) {		// ON
 		if (ESTADO_LUCES == 0) {
             ESTADO_LUCES = 1;
-            respuesta = "Luces prendidas";
+            strcpy(respuesta,"Luces prendidas");
         }
         else {
-            respuesta = "Luces ya estan prendidas";
+            strcpy(respuesta,"Luces ya estan prendidas");
         }
 	} else if (strcmp(hacer, "OFF") == 0) {		// OFF
 		if (ESTADO_LUCES == 1) {
             ESTADO_LUCES = 0;
-            respuesta = "Luces apagadas";
+            strcpy(respuesta,"Luces apagadas");
         }
         else {
-            respuesta = "Luces ya estan apagadas";
+            strcpy(respuesta,"Luces ya estan apagadas");
         }
     }
-
+	
 }
 
 /*-----------------------------------------------------------------------* 
