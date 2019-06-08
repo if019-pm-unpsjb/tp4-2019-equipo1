@@ -4,12 +4,10 @@
 
 typedef struct 
 {
-    char *luces;
     // programacion luces Hora Minutos Duración
     int hluces;
     int mluces;
     int dluces;
-    char *riego; 
     // programacion riego Hora Minutos Duración
     int hriego;
     int mriego;

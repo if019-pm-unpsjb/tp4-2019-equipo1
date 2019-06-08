@@ -154,7 +154,7 @@ int inicializar( int puerto ) {
 		/* 
 	 	 * Esperar una petición
 	 	 */
-		printf( "Esperando petición (Padre).\n" );
+		//printf( "Esperando petición (Padre).\n" );
 		if ( ( ndescriptor = esperar(sock_TCP) ) < 0 ) {
 			printf("ERROR ESPERANDO: ");
 			exit( -3 );
@@ -171,11 +171,13 @@ int inicializar( int puerto ) {
  *-------------------------------------------------------------------------*/ 	    
 int esperar( int sockfd ) {
 	int nsockfd;
+    struct sockaddr_in addr;
+	socklen_t addrlen = sizeof(addr);
 
 	/* aceptar una conexión */
-	if ( ( nsockfd = accept( sockfd, 0, 0 ) ) < 0 )
+	if ( ( nsockfd = accept( sockfd, &addr,&addrlen ) ) < 0 )
 		return ( -1 );
-	
+	//printf("Atendiendo cliente: %d:%d\n", ntohl( addr.sin_addr.s_addr),ntohs( addr.sin_port ) );
 	return nsockfd;
 }
 		
@@ -278,23 +280,23 @@ void atenderLuces(char *hacer, int hora, int minutos, int duracion, char *respue
 		config.mluces = minutos;				//-----------------
 		config.dluces = duracion;				//-----------------
 		guardarConfig( &config );	
-        respuesta = "Luces Programadas";		//-----------------
+        strcpy( respuesta, "OK: Luces Programadas" );		//-----------------
 		pthread_mutex_unlock(&filelock);		//-----------------
 	} else if (strcmp(hacer, "ON") == 0) {		// ON
 		if (ESTADO_LUCES == 0) {
             ESTADO_LUCES = 1;
-            respuesta = "Luces prendidas";
+            strcpy( respuesta,"OK: Luces encendidas" );
         }
         else {
-            respuesta = "Luces ya estan prendidas";
+            strcpy( respuesta,"OK: Luces ya se encuentran encendidas" );
         }
 	} else if (strcmp(hacer, "OFF") == 0) {		// OFF
 		if (ESTADO_LUCES == 1) {
             ESTADO_LUCES = 0;
-            respuesta = "Luces apagadas";
+            strcpy( respuesta,"OK: Luces apagadas" );
         }
         else {
-            respuesta = "Luces ya estan apagadas";
+            strcpy( respuesta,"OK: Luces ya se encuentran apagadas" );
         }
     }
 
@@ -314,23 +316,23 @@ void atenderRiego(char *hacer, int hora, int minutos, int duracion, char *respue
 		config.mriego = minutos;				//-----------------
 		config.driego = duracion;				//-----------------
 		guardarConfig( &config );
-        respuesta = "Riego programado";				//-----------------
+        strcpy( respuesta,"Riego programado" );				//-----------------
 		pthread_mutex_unlock(&filelock);		//-----------------
 	}else if (strcmp(hacer, "ON") == 0) {		// ON
 		if (ESTADO_RIEGO == 0) {
             ESTADO_RIEGO = 1;
-            respuesta = "Riego encendido";
+            strcpy( respuesta,"OK: Riego encendido" );
         }
         else {
-            respuesta = "Riego ya se encuentra encendido";
+            strcpy( respuesta, "OK: Riego ya se encuentra encendido" );
         }
 	} else if (strcmp(hacer, "OFF") == 0) {		// OFF
 		if (ESTADO_RIEGO == 1) {
             ESTADO_RIEGO = 0;
-            respuesta = "Riego apagado";
+            strcpy( respuesta,"OK: Riego apagado" );
         }
         else {
-            respuesta = "Riego ya se encuentra apagado";
+            strcpy( respuesta,"OK: Riego ya se encuentra apagado" );
         }  
     } 
 }
