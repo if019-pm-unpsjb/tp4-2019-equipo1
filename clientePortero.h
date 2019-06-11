@@ -4,7 +4,7 @@ int conectar( struct sockaddr_in dir );
 
 int principal( FILE *fp, int dir );
 
-int analizar( char *s, int sockfd, char *respuesta );
+int analizar( char *s, int sockfd, int sockUDP,char *respuesta, const struct sockaddr *dirUDP, socklen_t saUDP );
 
 void luces( int enc_apag, int hora, int minutos );
 
@@ -12,7 +12,7 @@ void riego( int enc_apag, int hora, int minutos );
 
 void solicitarImagen();
 
-void contestar( int fd_audio );
+void contestarLlamada(int sockUDP,const struct sockaddr *dirUDP, socklen_t saUDP);
 
 int separarPalabras( char *cad, char ***ptr );
 

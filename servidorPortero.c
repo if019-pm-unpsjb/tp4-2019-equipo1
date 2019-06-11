@@ -47,19 +47,43 @@ void *atenderPeticionUDP( void *d ) {
 	socklen_t longitud;
 	char msg[ MAXLINEA ];
 	int sockUDP = (int)d;
+	int n;
+	char linea_env[ MAXLINEA ], linea_rcb[ MAXLINEA + 1 ];
+	char linea_enviar[MAXLINEA];
 
-	for(;;) {
+	//for(;;) {
 		longitud = sizeof( dir_cli );
         bzero( msg,MAXLINEA );
-	 	// Recibo el comando del cliente
+	 	// Recibo el comando del cliente para que quede establecida la comunicacion
 		recibido = recvfrom( sockUDP, msg, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud );
 	 	
 		/*-------------------------------------------------------* 
 		* Procesa el comando recibido y envia respuesta al cliente
 		*-------------------------------------------------------*/
-		 procesarUDP( msg, sockUDP, recibido );
-	 
-	}
+		//procesarUDP( msg, sockUDP, recibido );
+		//Cambio la funcion procesarUDP por las lineas que siguen
+		//fgets( linea_env, MAXLINEA, stdin );
+			//printf("Llamada aceptada desde Puerto: %d\n", dir_cli.sin_port);		
+			while( fgets( linea_env, MAXLINEA, stdin ) != NULL ) {
+				if (strncmp(linea_env, "*EXIT*", 6) !=0){
+					strcpy(linea_enviar,"SERVIDOR: ");
+					strcat(linea_enviar, linea_env);
+					printf("\n\nEsperar comunicación cliente...\n");
+					sendto( sockUDP, linea_enviar, strlen(linea_enviar), 0, &dir_cli, sizeof( dir_cli ));
+					n = recvfrom( sockUDP, linea_rcb, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud  );
+					linea_rcb[ n ] = '\0';
+					printf( "\nCLIENTE [%d]: %s", dir_cli.sin_port,linea_rcb );
+				}
+				else
+				{
+					printf("Terminando la llamada con [%d]...\n", dir_cli.sin_port);
+					strcpy(linea_enviar, "FINSRV: Llamada finalizada...");
+					sendto( sockUDP, linea_enviar, strlen(linea_enviar), 0, &dir_cli, sizeof( dir_cli ));
+					break;
+				}
+			}	
+
+	//}
 	
 }
 
