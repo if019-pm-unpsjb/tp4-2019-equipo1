@@ -12,7 +12,7 @@ int recibir( int desc_con, char *msg );
 void atenderLuces(char *hacer, int hora, int minutos, int duracion, char *respuesta );
 void atenderRiego(char *hacer, int hora, int minutos, int duracion, char *respuesta );
 void atenderPortero();
-void atenderImagen();
+void atenderImagen( int stcp );
 void atenderLlamada(char *mensaje, int socketUDP, int recibido);
 
 /* ************************************************************
