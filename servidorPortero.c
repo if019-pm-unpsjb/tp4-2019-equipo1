@@ -15,6 +15,7 @@ static pthread_mutex_t filelock = PTHREAD_MUTEX_INITIALIZER;
 static int ESTADO_LUCES = 0;
 static int ESTADO_RIEGO = 0;
 
+
 void *atenderPeticionTCP( void *d ) {
 	int total;	
 	char msg[ MAXLINEA ];
@@ -41,51 +42,81 @@ void *atenderPeticionTCP( void *d ) {
 	}
 }
 
+// Atiendo la llamada de cada cliente (hijo)
+void *atenderHijoUDP( void *d){
+	struct sockaddr_in dir_cli;
+	char linea_env[ MAXLINEA ], linea_rcb[ MAXLINEA + 1 ];
+	char linea_enviar[MAXLINEA];
+	char **comando;
+	int cp;
+	int n;
+	int sockUDP = (int)d;
+	socklen_t longitud;
+
+	longitud = sizeof( dir_cli );
+    bzero( linea_env,MAXLINEA );
+	bzero( linea_rcb,MAXLINEA+1 );
+	bzero( linea_enviar,MAXLINEA );
+	/*-------------------------------------------------------* 
+	* Procesa el comando recibido y envia respuesta al cliente
+	*-------------------------------------------------------*/
+	//procesarUDP( msg, sockUDP, recibido );
+	//Cambio la funcion procesarUDP por las lineas que siguen
+	//fgets( linea_env, MAXLINEA, stdin );
+	//printf("Llamada aceptada desde Puerto: %d\n", dir_cli.sin_port);		
+	while( fgets( linea_env, MAXLINEA, stdin ) != NULL ) {
+		strcpy(linea_enviar, linea_env);
+		cp = separarPalabras( linea_enviar, &comando );
+
+		dir_cli.sin_family = AF_INET;	/* utilizará familia de protocolos de Internet */
+		dir_cli.sin_addr.s_addr = htonl( INADDR_ANY );		/* sobre la dirección IP local */
+		dir_cli.sin_port =  atoi(comando[0]);
+
+		if (strncmp(linea_env, "*EXIT*", 6) !=0){
+			strcpy(linea_enviar,"SERVIDOR: ");
+			strcat(linea_enviar, linea_env);
+			//printf("\n\nEsperar comunicación cliente...\n");
+			n=sendto( sockUDP, linea_enviar, strlen(linea_enviar), 0,(struct sockaddr *) &dir_cli, longitud);
+			if (n<0){
+				printf("No se pudo enviar el mensaje, cliente [%d] desconectado.\n", dir_cli.sin_port);
+			}
+			n = recvfrom( sockUDP, linea_rcb, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud  );
+			linea_rcb[ n ] = '\0';
+			printf( "\nCLIENTE [%d]: %s", dir_cli.sin_port,linea_rcb );
+		}
+		else
+		{
+			printf("Terminando la llamada con [%d]...\n", dir_cli.sin_port);
+			strcpy(linea_enviar, "FINSRV: Llamada finalizada...");
+			sendto( sockUDP, linea_enviar, strlen(linea_enviar), 0, (struct sockaddr *) &dir_cli, sizeof( dir_cli ));
+			break;
+		}
+	}
+}
+
 void *atenderPeticionUDP( void *d ) {
-	struct sockaddr_in dir_cli, dir_cli_p;
+	struct sockaddr_in dir_cli;
+	pthread_t t_hijoUDP;
 	int recibido;
 	socklen_t longitud;
 	char msg[ MAXLINEA ];
 	int sockUDP = (int)d;
 	int n;
-	char linea_env[ MAXLINEA ], linea_rcb[ MAXLINEA + 1 ];
-	char linea_enviar[MAXLINEA];
 
-	//for(;;) {
-		longitud = sizeof( dir_cli );
+	longitud = sizeof( dir_cli );
+	for(;;) {
         bzero( msg,MAXLINEA );
 	 	// Recibo el comando del cliente para que quede establecida la comunicacion
 		recibido = recvfrom( sockUDP, msg, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud );
 	 	
-		/*-------------------------------------------------------* 
-		* Procesa el comando recibido y envia respuesta al cliente
-		*-------------------------------------------------------*/
-		//procesarUDP( msg, sockUDP, recibido );
-		//Cambio la funcion procesarUDP por las lineas que siguen
-		//fgets( linea_env, MAXLINEA, stdin );
-			//printf("Llamada aceptada desde Puerto: %d\n", dir_cli.sin_port);		
-			while( fgets( linea_env, MAXLINEA, stdin ) != NULL ) {
-				if (strncmp(linea_env, "*EXIT*", 6) !=0){
-					strcpy(linea_enviar,"SERVIDOR: ");
-					strcat(linea_enviar, linea_env);
-					printf("\n\nEsperar comunicación cliente...\n");
-					sendto( sockUDP, linea_enviar, strlen(linea_enviar), 0, &dir_cli, sizeof( dir_cli ));
-					n = recvfrom( sockUDP, linea_rcb, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud  );
-					linea_rcb[ n ] = '\0';
-					printf( "\nCLIENTE [%d]: %s", dir_cli.sin_port,linea_rcb );
-				}
-				else
-				{
-					printf("Terminando la llamada con [%d]...\n", dir_cli.sin_port);
-					strcpy(linea_enviar, "FINSRV: Llamada finalizada...");
-					sendto( sockUDP, linea_enviar, strlen(linea_enviar), 0, &dir_cli, sizeof( dir_cli ));
-					break;
-				}
-			}	
-
-	//}
-	
+		// Atiendo a cada cliente por separado
+		printf("Atendiendo cliente %d:\n", dir_cli.sin_port);
+		printf("\nCLIENTE [%d]: %s", dir_cli.sin_port, msg);
+		pthread_create( &t_hijoUDP, NULL, atenderHijoUDP, (void *)sockUDP );
+	}	
 }
+
+
 
 int main ( int argc, char *argv[] ) {
 	/*---------------------------------------------------------------------*
@@ -113,7 +144,8 @@ int main ( int argc, char *argv[] ) {
  * inicializar() - inicializar el servidor
  *-------------------------------------------------------------------------*/ 	    
 int inicializar( int puerto ) {
-	int sock_TCP, sock_UDP;
+	int sock_TCP;
+	int sock_UDP;
 	int ndescriptor;
 	int ldescriptorUDP;
 	int opt = 1;  			//Opcion para reusar el puerto: setsockopt
