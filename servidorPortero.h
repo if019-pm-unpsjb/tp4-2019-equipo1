@@ -1,5 +1,11 @@
 #define MAXCLIENTES 10
-#define MAXLINEA 50
+#define MAXLINEA 200
+#define MAXSIZE 512
+
+#define ACK                   2
+#define NACK                  3
+#define TRANSFER              100
+#define ERROR                 400
 
 
 void procesarTCP( char *mensaje, int socketTCP );
@@ -12,7 +18,9 @@ int recibir( int desc_con, char *msg );
 void atenderLuces(char *hacer, int hora, int minutos, int duracion, char *respuesta );
 void atenderRiego(char *hacer, int hora, int minutos, int duracion, char *respuesta );
 void atenderPortero();
-void atenderImagen( int stcp );
+int atenderImagen( int stcp, char *mensaje );
+int writen(int sd,char *ptr,int size);
+int readn(int sd,char *ptr,int size);
 void atenderLlamada(char *mensaje, int socketUDP, int recibido);
 
 /* ************************************************************
