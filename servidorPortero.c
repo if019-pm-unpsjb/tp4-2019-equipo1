@@ -9,6 +9,7 @@
 #include <errno.h>
 #include <arpa/inet.h>
 #include <netinet/ip.h>
+#include <time.h>
 
 #include "servidorPortero.h"
 #include "porteroUtils.h"
@@ -23,11 +24,10 @@ void *atenderPeticionTCP( void *d ) {
 	int total;	
 	char msg[ MAXLINEA ];
 	int sockTCP = (int)d;
-	//msg = (char*)malloc(MAXLINEA);
 	
    	printf( "(%d) Atendiendo petición.\n", sockTCP );
-	while ( total = recibir( sockTCP, msg ) > 0 ) {
-		//printf( "(%d) Recibido: %s\n", sockTCP, msg );
+	while (total = recibir( sockTCP, msg ) > 0) {
+		printf( "(%d) Recibido: %s\n", sockTCP, msg );
 		
 		/*-------------------------------------------------------* 
 		* Realizar la tarea específica del servicio
@@ -37,11 +37,11 @@ void *atenderPeticionTCP( void *d ) {
 		/*-------------------------------------------------------* 
 	 	* Responder petición		      					
 		*-------------------------------------------------------*/
-		if ( ( total = enviar( sockTCP, msg ) ) < 0 ) { 
+		if ((total = enviar( sockTCP, msg )) < 0) { 
 			perror("(%d) ERROR ENVIAR TCP: ");
 			exit(-1);
 		}
-		//printf("(%d) Respuesta enviada: %s.\n", sockTCP, msg );
+		printf("(%d) Respuesta enviada: %s\n", sockTCP, msg );
 	}
 }
 
@@ -270,13 +270,13 @@ int inicializar( int puerto ) {
  *-------------------------------------------------------------------------*/ 	    
 int esperar( int sockfd ) {
 	int nsockfd;
-    struct sockaddr_in addr;
+    //struct sockaddr_in addr;
+    struct sockaddr addr;
 	socklen_t addrlen = sizeof(addr);
 
 	/* aceptar una conexión */
 	if ( ( nsockfd = accept( sockfd, &addr,&addrlen ) ) < 0 )
 		return ( -1 );
-	//printf("Atendiendo cliente: %d:%d\n", ntohl( addr.sin_addr.s_addr),ntohs( addr.sin_port ) );
 	return nsockfd;
 }
 		
@@ -291,7 +291,6 @@ int enviar( int nsockfd, char *msg ) {
 		close( nsockfd );
 		return ( -1 );
 	}
-
 	return longitud;
 }
 
@@ -303,13 +302,10 @@ int recibir( int nsockfd, char *msg ) {
 	int longitud;
 
 	bzero( msg, MAXLINEA );
-
-	if ( ( longitud =  read( nsockfd, msg, (int)MAXLINEA ) ) < 0 ) {
+	if ((longitud = read( nsockfd, msg, (int)MAXLINEA )) < 0 ) {
 		close( nsockfd );
 		return ( -2 );
 	}
- 	//if (longitud > 0) 
-	//	printf( "comando = %s\n", msg );
 	return ( longitud );
 }
 
@@ -325,18 +321,18 @@ void procesarTCP( char *mensaje, int socketTCP ) {
 	printf ( "(%d) Procesando comando: %s \n", socketTCP, mensaje );
 	cp = separarPalabras( mensaje, &comando );
 	
-	if (cp == 5){						//Si es PROG
+	if (cp == 5) {						//Si es PROG
 		hora = atoi(comando[2]);
 		minutos = atoi(comando[3]);
 		duracion = atoi(comando[4]);
-	}else{								//Si es ON | OFF	
+	}
+    else {								//Si es ON | OFF	
 		hora = -1;
 		minutos = -1;
 		duracion = -1;
 	}
 	
-	switch (atoi(comando[0]))
-	{
+	switch (atoi(comando[0])) {
 		case LUCES:
 			atenderLuces(comando[1], hora, minutos, duracion, mensaje );
 			break;
@@ -344,11 +340,10 @@ void procesarTCP( char *mensaje, int socketTCP ) {
 			atenderRiego(comando[1], hora, minutos, duracion, mensaje );
 			break;
 		case IMAGEN:
-			//atenderImagen());
+			atenderImagen( socketTCP, mensaje );
 			break;
 		case LLAMADA:
 			//No atiendo este comando, lo atiende procesarUDP
-			
 			break;
 		case EXIT:
 			break;
@@ -436,11 +431,184 @@ void atenderRiego(char *hacer, int hora, int minutos, int duracion, char *respue
     } 
 }
 
-void atenderImagen(int stcp){
+/*-----------------------------------------------------------------------* 
+ * atenderImagen() - Transfiere al cliente un archivo imagen
+ *-----------------------------------------------------------------------*/
+int atenderImagen( int stcp, char *respuesta ){
 
+    int i,c,fsize,ack;
+    int no_read ,num_blks , num_blks1,num_last_blk,num_last_blk1,tmp;
+
+    char *fname="../imagen.jpg";
+    char out_buf[MAXSIZE];
+    FILE *fp;
+      
+     no_read = 0;
+     num_blks = 0;
+     num_last_blk = 0; 
+
+
+     /* Abre el archivo imagen a transferir */
+     if((fp = fopen(fname,"r")) == NULL) {
+        strcpy( respuesta,"ERROR: No se pudo abrir el archivo\n");
+        return -1;
+     }
+   
+     /* El servdiro lee tamaño del archivo y calcula cantidad de bloques de tamaño MAXSIZE a transferir,
+        tambien calcula la cantidad de bytes del ultimo bloque menor a MAXSIZE
+        los envia al cliente y espera un ACK por la informacion */
+    printf("Servidor: comenzando transferencia...\n");
+    fsize = 0;
+    ack = 0;   
+    while ((c = getc(fp)) != EOF) {
+        fsize++;
+    }
+    printf( "Servidor: tamaño del archivo: %d\n", fsize );
+    num_blks = fsize / MAXSIZE; 
+    num_blks1 = htons(num_blks);
+    num_last_blk = fsize % MAXSIZE; 
+    num_last_blk1 = htons(num_last_blk);
+    
+    printf("Servidor: enviando mensaje de cantidad de blokes %d\n", num_blks );
+    if((writen( stcp,(char *)&num_blks1,sizeof(num_blks1))) < 0) {
+        printf("Servidor: error de escritura :%d\n",errno);
+        strcpy( respuesta, "ERROR: error de escritura\n" );
+        return -1;
+    }
+    
+    printf("Servidor: recibiendo ACK del cliente de cantidad de blokes\n" );
+    if((readn( stcp,(char *)&ack,sizeof(ack))) < 0) { 
+        printf("Servidor: ACK error lectura:%d\n",errno);
+        strcpy( respuesta,"ERROR: error de lectura ACK\n" );
+        return -1; 
+    }
+    if (ntohs(ack) != ACK) {
+        printf("Cliente: ACK del tamaño del archivo no recibido\n");
+        strcpy( respuesta, "ERROR: No se recibido ACK del tamaño de archivo desde el cliente\n");
+        return -1;
+    }
+
+    printf("Servidor: enviando mensaje al cliente info de ultimo bloke, cantidad de bytes:%d\n", num_last_blk );
+    if((writen( stcp,(char *)&num_last_blk1,sizeof(num_last_blk1))) < 0) {
+        printf("Servidor: error de escritura :%d\n",errno);
+        strcpy( respuesta, "ERROR: error de escritura\n");
+        return -1;
+    }
+    printf("Servidor: recibiendo ACK de de info ultimo bloke\n" );
+    if((readn( stcp,(char *)&ack,sizeof(ack))) < 0) {
+        printf("Servidor: ACK error lectura:%d\n",errno);
+        strcpy( respuesta, "ERROR: error de lectura ACK\n");
+        return -1; 
+    }
+    if (ntohs(ack) != ACK) {
+        printf("Servidor: ACK sobre el tamaño del archivo no recibido\n");
+        strcpy( respuesta, "ERROR: ACK tamaño de archivo no recibido\n" );
+        return -1;
+    }
+    
+    rewind(fp);    
+    
+    /* Comienza la tranferencia del archivo, bloque por bloque */          
+    for(i= 0; i < num_blks; i ++) { 
+        no_read = fread( out_buf,sizeof(char),MAXSIZE,fp );
+        if (no_read == 0) {
+            printf("Servidor: error de lectura de archivo\n");
+            strcpy( respuesta, "ERROR: error de lectura durante la transferencia\n" );
+            return -1;
+        }
+        if (no_read != MAXSIZE) {
+            printf("Servidor: error de lectura de archivo: no_read es menor\n");
+            strcpy( respuesta, "ERROR: error de lectura de archivo: no_read es menor\n" );
+            return -1;
+        }
+        if((writen( stcp,out_buf,MAXSIZE )) < 0) {
+            printf("Servidor: error enviando blocke:%d\n",errno);
+            strcpy( respuesta, "ERROR: error enviando blocke\n" );
+            return -1;
+        }
+        if((readn( stcp,(char *)&ack,sizeof(ack) )) < 0) {
+            printf("Servidor: ACK error de lectura:%d\n",errno);
+            strcpy( respuesta, "ERROR: error de lectura ACK" );
+            return -1;
+        }
+        if (ntohs(ack) != ACK) {
+            printf("Servidor: ACK no recibido para el blocke %d\n",i);
+            strcpy( respuesta, "ERROR: ACK de blocke no recibido\n" );
+            return -1;
+        }
+        printf("Enviando bloque %d.... , ",i);
+    }
+
+    if (num_last_blk > 0) { 
+        printf("%d\n",num_blks);
+        no_read = fread( out_buf,sizeof(char),num_last_blk,fp ); 
+        if (no_read == 0) {
+            printf("Servidor: error de lectura de archivo\n");
+            strcpy( respuesta, "ERROR: error de lectura de archivo\n");
+            return -1;
+        }
+        if (no_read != num_last_blk)  {
+            printf("Servidor: error de lectura de archivo: no_read es menor 2\n");
+            strcpy( respuesta, "ERROR: error de lectura de archivo: no_read es menor a 2\n");
+            return -1;
+        }
+        if((writen( stcp,out_buf,num_last_blk)) < 0) {
+            printf("Servidor: error de lectura de archivo %d\n",errno);
+            strcpy( respuesta, "ERROR: error de lectura de archivo\n" );
+            return -1;
+        }
+        if((readn( stcp,(char *)&ack,sizeof(ack))) < 0) {
+            printf("Servidor: ACK error de lectura %d\n",errno);
+            strcpy( respuesta, "ERROR: ACK error de lectura\n" );
+            return -1;
+        }
+        if (ntohs(ack) != ACK) {
+            printf("Servidor: ACK no recibido ultimo blocke\n");
+            strcpy( respuesta, "ERROR: ACK del ultimo blocke no recibido\n" );
+            return -1;
+        }
+    }
+    else 
+        printf( "\n" );
+                                                  
+   /* Finaliza transferencia del archivo, cierra archivo */
+   printf("Servidor: TRANSFERENCIA DE ARCHIVO COMPLETA sobre socket %d\n", stcp );
+   strcpy( respuesta, "OK: Transferencia de imagen completa" );
+   fclose( fp );
+   return 1;
 }
 
-void atenderLlamada(char *mensaje, int socketUDP, int recibido){
-	printf("[%d] %d Bytes recibidos, Comando: %s\n ",socketUDP, recibido, mensaje);
-	
+/*
+  TO TAKE CARE OF THE POSSIBILITY OF BUFFER LIMMITS IN THE KERNEL FOR THE
+ SOCKET BEING REACHED (WHICH MAY CAUSE READ OR WRITE TO RETURN FEWER CHARACTERS
+  THAN REQUESTED), WE USE THE FOLLOWING TWO FUNCTIONS */  
+   
+int readn(int sd,char *ptr,int size) {
+    int no_left,no_read;
+    no_left = size;
+    
+    while (no_left > 0) { 
+        no_read = read(sd,ptr,no_left);
+        if(no_read <0)  
+            return(no_read);
+        if (no_read == 0) 
+            break;
+        no_left -= no_read;
+        ptr += no_read;
+    }
+    return(size - no_left);
+}
+
+int writen(int sd,char *ptr,int size) {
+    int no_left,no_written;
+    no_left = size;
+    
+    while (no_left > 0) { 
+        no_written = write(sd,ptr,no_left);
+        if(no_written <=0)  
+            return(no_written);
+        no_left -= no_written;
+        ptr += no_written;
+    }
+    return(size - no_left);
 }
