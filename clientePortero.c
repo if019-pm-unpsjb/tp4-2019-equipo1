@@ -103,7 +103,7 @@ int principal( FILE *fp, int sockTCP, char *args[]) {
 	while( fgets( msg, MAXLINEA, fp ) != NULL ) {
 		msg[ strlen( msg ) -1 ] = '\0';
         bzero( respuesta, MAXLINEA );
-        if (analizar( msg, sockfd, respuesta, args ) == -1)
+        if (analizar( msg, sockTCP, respuesta, args ) == -1)
             break; 
         printf( "\n\nPresione una tecla para continuar.... ");
         getchar();

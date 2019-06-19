@@ -343,7 +343,6 @@ void procesarTCP( char *mensaje, int socketTCP ) {
 			atenderImagen( socketTCP, mensaje );
 			break;
 		case LLAMADA:
-			//No atiendo este comando, lo atiende procesarUDP
 			break;
 		case EXIT:
 			break;
@@ -352,13 +351,6 @@ void procesarTCP( char *mensaje, int socketTCP ) {
 	}	
 }
 
-/*-----------------------------------------------------------------------* 
- * procesarUDP() - Solo ejecuta la funcion de transferencia de audio
- *-----------------------------------------------------------------------*/
-void procesarUDP( char *mensaje, int socketUDP, int recibido ) {
-	
-	atenderLlamada(mensaje, socketUDP, recibido);
-}
 
 /*-----------------------------------------------------------------------* 
  * atenderLuces() - ejecuta el comando LUCES ON | OFF | PROG
@@ -439,7 +431,7 @@ int atenderImagen( int stcp, char *respuesta ){
     int i,c,fsize,ack;
     int no_read ,num_blks , num_blks1,num_last_blk,num_last_blk1,tmp;
 
-    char *fname="../imagen.jpg";
+    char *fname="./llamada/imagen.jpg";
     char out_buf[MAXSIZE];
     FILE *fp;
       

@@ -9,7 +9,6 @@
 
 
 void procesarTCP( char *mensaje, int socketTCP );
-void procesarUDP( char *mensaje, int socketUDP, int recibido );
 int inicializar( int puerto );
 int esperar( int desc_con );
 int enviar( int desc_con, char *msg );
