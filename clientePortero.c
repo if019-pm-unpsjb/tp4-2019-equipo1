@@ -445,7 +445,7 @@ void contestarLlamada(char *args[]){
     //n = sendto(sockfd, "",strlen(""), 0, (struct sockaddr*) &servaddr, sizeof(servaddr));
 	FILE *fdclient;
 
-    fdclient=fopen("/home/mcoppa/tp4/llamada/cliente1", "r");
+    fdclient=fopen("./llamada/cliente1", "r");
 	if ( fdclient == NULL){
 		perror("Llamada: ");
         exit(EXIT_FAILURE);

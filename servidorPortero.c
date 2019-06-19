@@ -95,7 +95,7 @@ static void* atenderLlamada_udp(void* s){
 
 	FILE *fdserver;
 	
-	fdserver=fopen("/home/mcoppa/tp4/llamada/servidor1", "r");
+	fdserver=fopen("./llamada/servidor1", "r");
 	if ( fdserver == NULL){
 		perror("Llamada: ");
         exit(EXIT_FAILURE);
