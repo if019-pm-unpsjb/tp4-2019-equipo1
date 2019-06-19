@@ -8,15 +8,17 @@
 #include <pthread.h>
 #include <errno.h>
 #include <arpa/inet.h>
+#include <netinet/ip.h>
 #include <time.h>
 
 #include "servidorPortero.h"
 #include "porteroUtils.h"
 
 static pthread_mutex_t filelock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t comm = PTHREAD_MUTEX_INITIALIZER;
 static int ESTADO_LUCES = 0;
 static int ESTADO_RIEGO = 0;
-
+//int hilo =0;
 
 void *atenderPeticionTCP( void *d ) {
 	int total;	
@@ -43,121 +45,172 @@ void *atenderPeticionTCP( void *d ) {
 	}
 }
 
+#define BUF_SIZE 1024
+
+int thread_cnt = 0;
+struct in_addr ip_srv;
+
+struct conn_info {
+    int thread_id;
+    int sock;
+    struct sockaddr_in addr;
+};
+
+
 // Atiendo la llamada de cada cliente (hijo)
-void *atenderHijoUDP( void *d){
-	struct sockaddr_in dir_cli;
-	char linea_env[ MAXLINEA ], linea_rcb[ MAXLINEA + 1 ];
-	char linea_enviar[MAXLINEA];
-	char **comando;
-	int cp;
-	int n;
-	int sockUDP = (int)d;
-	socklen_t longitud;
+static void* atenderLlamada_udp(void* s){
+    ssize_t n;
+    char buf[BUF_SIZE];
+    socklen_t len = sizeof(struct sockaddr_in);
 
-	longitud = sizeof( dir_cli );
-    bzero( linea_env,MAXLINEA );
-	bzero( linea_rcb,MAXLINEA+1 );
-	bzero( linea_enviar,MAXLINEA );
-	/*-------------------------------------------------------* 
-	* Procesa el comando recibido y envia respuesta al cliente
-	*-------------------------------------------------------*/
-	//procesarUDP( msg, sockUDP, recibido );
-	//Cambio la funcion procesarUDP por las lineas que siguen
-	//fgets( linea_env, MAXLINEA, stdin );
-	//printf("Llamada aceptada desde Puerto: %d\n", dir_cli.sin_port);		
-	while( fgets( linea_env, MAXLINEA, stdin ) != NULL ) {
-		strcpy(linea_enviar, linea_env);
-		cp = separarPalabras( linea_enviar, &comando );
+    struct conn_info *client = (struct conn_info *) s;
 
-		dir_cli.sin_family = AF_INET;	/* utilizará familia de protocolos de Internet */
-		dir_cli.sin_addr.s_addr = htonl( INADDR_ANY );		/* sobre la dirección IP local */
-		dir_cli.sin_port =  atoi(comando[0]);
+    struct sockaddr_in naddr;
+    memset(&naddr, 0, sizeof(struct sockaddr_in));
+    naddr.sin_family = AF_INET;
+    naddr.sin_port = htons(0);
+    naddr.sin_addr.s_addr = ip_srv.s_addr;
 
-		if (strncmp(linea_env, "*EXIT*", 6) !=0){
-			strcpy(linea_enviar,"SERVIDOR: ");
-			strcat(linea_enviar, linea_env);
-			//printf("\n\nEsperar comunicación cliente...\n");
-			n=sendto( sockUDP, linea_enviar, strlen(linea_enviar), 0,(struct sockaddr *) &dir_cli, longitud);
-			if (n<0){
-				printf("No se pudo enviar el mensaje, cliente [%d] desconectado.\n", dir_cli.sin_port);
-			}
-			n = recvfrom( sockUDP, linea_rcb, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud  );
-			linea_rcb[ n ] = '\0';
-			printf( "\nCLIENTE [%d]: %s", dir_cli.sin_port,linea_rcb );
-		}
-		else
-		{
-			printf("Terminando la llamada con [%d]...\n", dir_cli.sin_port);
-			strcpy(linea_enviar, "FINSRV: Llamada finalizada...");
-			sendto( sockUDP, linea_enviar, strlen(linea_enviar), 0, (struct sockaddr *) &dir_cli, sizeof( dir_cli ));
-			break;
-		}
+    client->sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+    int optval = 1;
+    if (setsockopt(client->sock, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &optval, sizeof(optval)) == -1) {
+        perror("setsockopt");
+        exit(EXIT_FAILURE);
+    }
+
+    if (bind(client->sock, (struct sockaddr*) &naddr, sizeof(struct sockaddr_in)) == -1) {
+        perror("bind");
+        exit(EXIT_FAILURE);
+    }
+
+    getsockname(client->sock, (struct sockaddr*) &naddr, &len);
+
+    //printf("[Thread %d] I'm listening at port %d, and handling client %s:%d ...\n", client->thread_id, ntohs(naddr.sin_port), inet_ntoa((client->addr).sin_addr), ntohs((client->addr).sin_port));
+
+    //Llamo al cliente cuando se conecta
+	strcpy(buf, "[SERVER]: Hola!\n");
+	//printf("%s\n", buf);
+    sendto(client->sock, buf, strlen(buf), 0, (struct sockaddr*) &(client->addr), sizeof(struct sockaddr_in));
+
+	FILE *fdserver;
+	
+	fdserver=fopen("/home/mcoppa/tp4/llamada/servidor1", "r");
+	if ( fdserver == NULL){
+		perror("Llamada: ");
+        exit(EXIT_FAILURE);
+	}
+	// Comienzo la llamada
+	while (!feof(fdserver)){
+		bzero( buf, BUF_SIZE );
+		n = recvfrom(client->sock, buf, BUF_SIZE, 0, (struct sockaddr*) &naddr, &len);
+       	if (n < 0) {
+       	    perror("recvfrom");
+			exit(EXIT_FAILURE);
+       	}
+		//buf[n]='\0';
+		//printf("[CLIENTE %d] [%s:%d] %s\n", client->thread_id, inet_ntoa(naddr.sin_addr), ntohs(naddr.sin_port), buf);
+		
+		bzero( buf, BUF_SIZE );
+		fgets(buf, BUF_SIZE, fdserver);
+		//printf("[SERVER]: %s", buf);
+		// Lo envio al cliente para que tambien imprima la llamada
+		n = sendto(client->sock, buf, strlen(buf), 0, (struct sockaddr*) &(client->addr), sizeof(struct sockaddr_in));
+		if (n < 0) {
+            perror("sendto");
+            exit(EXIT_FAILURE);
+        }
+	}
+	fclose(fdserver);
+
+    printf("[CLIENTE] [%s:%d] Llamada finalizada.\n", inet_ntoa((client->addr).sin_addr), ntohs((client->addr).sin_port));
+    
+    pthread_exit(0);
+}
+
+/*********************************************************************
+ * iniciarServidorUDP()
+ * *******************************************************************/
+void *iniciarServidorUDP( void *p ) {
+    int sock;
+    struct sockaddr_in addr;
+    struct conn_info *client;
+    char buf[100];
+	int puerto = (int)p;
+ 
+    inet_aton("127.0.0.1", &ip_srv);
+
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock == -1) {
+        perror("socket");
+        exit(EXIT_FAILURE);
+    }
+
+    memset(&addr, 0, sizeof(struct sockaddr_in));
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(puerto);
+    //addr.sin_addr.s_addr = htonl( INADDR_ANY );		// sobre la dirección IP local
+	addr.sin_addr.s_addr = ip_srv.s_addr;
+
+    if (bind(sock, (struct sockaddr*) &addr, sizeof(struct sockaddr_in)) == -1) {
+        perror("bind");
+        exit(EXIT_FAILURE);
+    }
+
+    pthread_t thread;
+
+
+    int n;
+    for (;;) {
+        socklen_t clientlen = sizeof(struct sockaddr_in);
+        client = (struct conn_info*) malloc(sizeof(struct conn_info));
+        memset(client, 0, sizeof(struct conn_info));
+        
+		bzero( buf, BUF_SIZE );
+		n = recvfrom(sock, buf, sizeof(buf), 0, (struct sockaddr*) &(client->addr), &clientlen);
+
+        printf("[CLIENTE] [%s:%d] Iniciando Llamada\n", inet_ntoa((client->addr).sin_addr), ntohs((client->addr).sin_port));
+		buf[n] = '\0';
+
+        client->thread_id = thread_cnt++;
+
+        pthread_create(&thread, NULL, atenderLlamada_udp, (void*) client);
 	}
 }
-
-void *atenderPeticionUDP( void *d ) {
-	struct sockaddr_in dir_cli;
-	pthread_t t_hijoUDP;
-	int recibido;
-	socklen_t longitud;
-	char msg[ MAXLINEA ];
-	int sockUDP = (int)d;
-	int n;
-
-	longitud = sizeof( dir_cli );
-	for(;;) {
-        bzero( msg,MAXLINEA );
-	 	// Recibo el comando del cliente para que quede establecida la comunicacion
-		recibido = recvfrom( sockUDP, msg, MAXLINEA, 0, (struct sockaddr *) &dir_cli, &longitud );
-	 	
-		// Atiendo a cada cliente por separado
-		printf("Atendiendo cliente %d:\n", dir_cli.sin_port);
-		printf("\nCLIENTE [%d]: %s", dir_cli.sin_port, msg);
-		pthread_create( &t_hijoUDP, NULL, atenderHijoUDP, (void *)sockUDP );
-	}	
-}
-
 
 
 int main ( int argc, char *argv[] ) {
 	/*---------------------------------------------------------------------*
 	 * Verificar los argumentos
 	 *---------------------------------------------------------------------*/
- 	if ( argc < 2 ) {
-		printf( "Uso: servidor <puerto>\n" );
-		exit( -1 );
-	}
+     if (argc < 2) {
+        fprintf(stderr, "Uso: %s puerto\n", argv[0]);
+        exit(EXIT_FAILURE);
+    }
 	printf( "\tServidor Portero. Para salir presione <Ctrl>-C\n" );
 	
 	/*--------------------------------------------------------------------* 
 	 * Inicializar el servidor
-	 *--------------------------------------------------------------------*/ 
+	 *--------------------------------------------------------------------*/
 	if ( ( inicializar( atoi( argv[1] ) ) ) < 0 ) {
 		perror( "ERROR INICIALIZAR: " );
 		exit(-1);
 	}	
-
-    //msg = (char*)malloc( sizeof( MAXLINEA + 1 ) );
-
 }
+
+
 
 /*-------------------------------------------------------------------------*
  * inicializar() - inicializar el servidor
  *-------------------------------------------------------------------------*/ 	    
 int inicializar( int puerto ) {
 	int sock_TCP;
-	int sock_UDP;
 	int ndescriptor;
-	int ldescriptorUDP;
 	int opt = 1;  			//Opcion para reusar el puerto: setsockopt
 	
 	pthread_t t_hijoTCP;	//Estructura para atenderPeticionTCP	
 	pthread_t t_hijoUDP;	//Estructura para atenderPeticionUDP
-	struct sockaddr_in dir_srv, dir_cli;
-
-	int recibido;
-	socklen_t longitud;
-	char msg[ MAXLINEA ];
+	struct sockaddr_in dir_srv;
 	
 	/*--------------------------------------------------------------------* 
 	 * Inicializar el servidor TCP                          			  *
@@ -166,13 +219,7 @@ int inicializar( int puerto ) {
 		printf("ERROR SOCKET TCP:\n");
 		exit ( -1 );
 	}
-	/*--------------------------------------------------------------------* 
-	 * Inicializar el servidor UDP                          			  *
-	 *--------------------------------------------------------------------*/
-	if ( ( sock_UDP = socket( AF_INET, SOCK_DGRAM, 0 ) ) < 0 ) {
-		perror("ERROR SOCKET UDP:\n");
-		exit( -1 );
-	}
+
 	/* bind de la dirección local */
 	bzero( (char *) &dir_srv, sizeof( dir_srv ) );
 	dir_srv.sin_family = AF_INET;	/* utilizará familia de protocolos de Internet */
@@ -180,17 +227,11 @@ int inicializar( int puerto ) {
 	dir_srv.sin_port = htons( puerto );
 
 	setsockopt( sock_TCP, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof( opt ));
-	setsockopt( sock_UDP, SOL_SOCKET, SO_REUSEADDR | SO_REUSEPORT, &opt, sizeof( opt ));
 
 	// bind TCP
     int b;
 	if ((b=bind( sock_TCP, (struct sockaddr *) &dir_srv, sizeof( dir_srv ) )) < 0 ){
 		printf("ERROR BIND TCP:%d\n", b);
-		exit ( -2 );
-	}
-	// bind UDP
-	if ( bind( sock_UDP, (struct sockaddr *) &dir_srv, sizeof( dir_srv ) ) < 0 ) {
-		printf("ERROR BIND UDP:\n");
 		exit ( -2 );
 	}
 
@@ -203,7 +244,7 @@ int inicializar( int puerto ) {
 	/*----------------------------------------------------------------* 
 	 * Comenzar tarea del servidor UDP
 	 *----------------------------------------------------------------*/
-	pthread_create( &t_hijoUDP, NULL, atenderPeticionUDP, (void *)sock_UDP );
+	pthread_create( &t_hijoUDP, NULL, iniciarServidorUDP, (void *)puerto );
 	/*----------------------------------------------------------------*
 	 * Comenzar tarea del servidor TCP
 	 *----------------------------------------------------------------*/
@@ -220,6 +261,7 @@ int inicializar( int puerto ) {
 		pthread_create( &t_hijoTCP, NULL, atenderPeticionTCP, (void *)ndescriptor );
 	}
     pthread_mutex_destroy( &filelock );
+	pthread_mutex_destroy( &comm );
 	return ( 1 );
 }
 
@@ -388,7 +430,6 @@ void atenderRiego(char *hacer, int hora, int minutos, int duracion, char *respue
         }  
     } 
 }
-
 
 /*-----------------------------------------------------------------------* 
  * atenderImagen() - Transfiere al cliente un archivo imagen
@@ -570,10 +611,4 @@ int writen(int sd,char *ptr,int size) {
         ptr += no_written;
     }
     return(size - no_left);
-}
-
-void atenderLlamada(char *mensaje, int socketUDP, int recibido){
-	
-	printf("[%d] %d Bytes recibidos, Comando: %s\n ",socketUDP, recibido, mensaje);
-	
 }

@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <signal.h>
+#include <pthread.h>
 
 #include <string.h>
 #include <stdlib.h>
@@ -14,11 +15,13 @@
 #include "clientePortero.h"
 #include "porteroUtils.h"
 
-/* cambios */
+//int PUERTO_SRV = 0;
+//char *ADDR_SRV;
 
-int main( int argc, char *argv[] ) {
 
-    int descriptor;
+int main ( int argc, char *argv[] ) {
+    int sockTCP;
+    int sockUDP;
 	struct sockaddr_in dir;
 
 	/*---------------------------------------------------------------------
@@ -36,29 +39,30 @@ int main( int argc, char *argv[] ) {
 	/*-------------------------------------------------------------------- 
 	 * Establecer la dirección del servidor y conectarse
 	 *--------------------------------------------------------------------*/
-    
 	bzero( (char *) &dir, sizeof( dir ) );
 	dir.sin_family = AF_INET;
 	if ( inet_pton( AF_INET, argv[1], &dir.sin_addr ) <= 0 ) {
-	    perror( "inet_pton" );
+	    perror("Error en la función inet_pton:");
 	    exit( -1 );
 	}    
-	dir.sin_port = htons( atoi( argv[2] ) );
+	dir.sin_port = htons(atoi(argv[2]));
 
-	if ( ( descriptor = conectar( dir ) ) < 0 ) {
-		perror( "ERROR CONECTAR:" );
+	// Obtengo el socket TCP
+    if ( ( sockTCP = conectar( dir ) ) < 0 ) {
+		perror( "ERROR CONECTAR TCP:" );
 		exit( -1 );
 	}
 
-	
-    principal( stdin, descriptor );
-	
-	/*---------------------------------------------------------------------
-	 * Cerrar la conexión y terminar
+	/*---------------------------------------------------------------------*
+	 * Realizar la función del cliente
 	 *---------------------------------------------------------------------*/
-    
+	principal( stdin, sockTCP, argv);
+
+	/*---------------------------------------------------------------------
+	 * Cerrar la conexión TCP y terminar
+	 *---------------------------------------------------------------------*/
     printf( "Cerrando conexion....\n");
-	close( descriptor );
+	close( sockTCP );
 	printf( "Proceso cliente finalizado.\n" );
 
     return 1;
@@ -76,18 +80,17 @@ int conectar( struct sockaddr_in dir ) {
 		return ( -1 );
 	
 	/* conectarse al servidor */
-    printf( "conectando servidor\n");
+    printf( "Conectando al servidor...\n");
 	if ( connect( sockfd, (struct sockaddr *) &dir, sizeof( dir ) ) < 0 ) 
-		return ( -2 );
+        return ( -2 );
 	
 	return ( sockfd );
 }
 
-
 /*-------------------------------------------------------------------------
  * principal() 
- *-------------------------------------------------------------------------*/ 
-int principal( FILE *fp, int sockfd ) {
+ *-------------------------------------------------------------------------*/ 	    
+int principal( FILE *fp, int sockTCP, char *args[]) {
 	int resultado, total;
 	char msg[ MAXLINEA ];
     char respuesta[ MAXLINEA ];
@@ -100,7 +103,7 @@ int principal( FILE *fp, int sockfd ) {
 	while( fgets( msg, MAXLINEA, fp ) != NULL ) {
 		msg[ strlen( msg ) -1 ] = '\0';
         bzero( respuesta, MAXLINEA );
-        if (analizar( msg, sockfd, respuesta ) == -1)
+        if (analizar( msg, sockfd, respuesta, args ) == -1)
             break; 
         printf( "\n\nPresione una tecla para continuar.... ");
         getchar();
@@ -109,17 +112,16 @@ int principal( FILE *fp, int sockfd ) {
 	}
 }
 
-/*-------------------------------------------------------------------------
- * analizar() 
- *-------------------------------------------------------------------------*/ 
-int analizar( char *in, int sockfd, char *respuesta ) {
+int analizar( char *in, int sockfd, char *resp, char *args[]) {
     char **ptr;
     int cp;
-    int ret=0;
+    int ret=1;
     char cadenain[MAXLINEA];
+
     strcpy( cadenain, in );
     cp = separarPalabras( cadenain, &ptr );
     int opt = (int)atoi( ptr[0] );
+    
     switch (opt)
     {
         case 1:
@@ -127,12 +129,12 @@ int analizar( char *in, int sockfd, char *respuesta ) {
                 if (strcmp( ptr[1], "ON") == 0) {
                     // llamar a comando luces prender
                     enviar( sockfd, in, strlen( in ) );
-                    recibirRespuesta( sockfd, respuesta, (int)MAXLINEA);
+                    recibirRespuesta( sockfd, resp, (int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "OFF") == 0) {
                     // llamar a comando luces apagar
                     enviar( sockfd, in, strlen( in ) );
-                    recibirRespuesta( sockfd, respuesta,(int)MAXLINEA);
+                    recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "PROG" ) == 0){
                     if (cp == 5) {
@@ -143,7 +145,7 @@ int analizar( char *in, int sockfd, char *respuesta ) {
                         }
                         else {
                             enviar( sockfd, in, strlen( in ) );
-                            recibirRespuesta( sockfd, respuesta, (int)MAXLINEA);
+                            recibirRespuesta( sockfd, resp, (int)MAXLINEA);
                         }
                     }
                     else {
@@ -166,12 +168,12 @@ int analizar( char *in, int sockfd, char *respuesta ) {
                 if (strcmp( ptr[1], "ON") == 0) {
                     // llamar a comando luces prender
                     enviar( sockfd, in, strlen( in ) );
-                    recibirRespuesta( sockfd, respuesta,(int)MAXLINEA);
+                    recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "OFF") == 0) {
                     // llamar a comando luces apagar
                     enviar( sockfd, in, strlen( in ) );
-                    recibirRespuesta( sockfd, respuesta,(int)MAXLINEA);
+                    recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                 }
                 else if (strcmp( ptr[1], "PROG" ) == 0){
                     if (cp == 5) {
@@ -182,7 +184,7 @@ int analizar( char *in, int sockfd, char *respuesta ) {
                         }
                         else {
                             enviar( sockfd, in, strlen( in ) );
-                            recibirRespuesta( sockfd, respuesta,(int)MAXLINEA);
+                            recibirRespuesta( sockfd, resp,(int)MAXLINEA);
                         }
                     }
                     else {
@@ -203,14 +205,12 @@ int analizar( char *in, int sockfd, char *respuesta ) {
         case 3:
             printf( "Pedir Imagen\n");
             enviar( sockfd, in, strlen( in ) );
-            procesarTransferencia( sockfd, respuesta );
-            //recibirRespuesta( sockfd, respuesta,(int)MAXLINEA);
+            procesarTransferencia( sockfd, resp );
             break;
 
         case 4: 
-            printf( "contestar llamada\n" );
+            contestarLlamada(args);
             break;
-        
         case 5:
             printf( "Salir.....\n");
             ret = -1;
@@ -413,4 +413,65 @@ int validarProgramacion( int horas, int minutos, int duracion ) {
     if (horas < 0 || horas > 24 || minutos < 0 || minutos > 60 || duracion < 1 || duracion > 12 )
         return -1;
     return 1;
+}
+
+void contestarLlamada(char *args[]){
+	int sockfd; 
+	char buffer[MAXLINEA]; 
+	struct sockaddr_in	 servaddr; 
+
+    //if (argc < 3) {
+    //    fprintf(stderr, "Use: %s ip port\n", args[0]);
+    //    exit(EXIT_FAILURE);
+    //}
+
+	// Create socket 
+	if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
+		perror("socket creation failed"); 
+		exit(EXIT_FAILURE); 
+	} 
+
+	memset(&servaddr, 0, sizeof(servaddr)); 
+	
+	// Server address
+	servaddr.sin_family = AF_INET; 
+    servaddr.sin_port = htons(atoi(args[2]));
+    inet_aton(args[1], &(servaddr.sin_addr));
+	
+	int n, len; 
+    //printf("Send data to server %s:%d ...\n", inet_ntoa(servaddr.sin_addr), ntohs(servaddr.sin_port));
+	
+    len = sizeof(servaddr);
+    //n = sendto(sockfd, "",strlen(""), 0, (struct sockaddr*) &servaddr, sizeof(servaddr));
+	FILE *fdclient;
+
+    fdclient=fopen("/home/mcoppa/tp4/llamada/cliente1", "r");
+	if ( fdclient == NULL){
+		perror("Llamada: ");
+        exit(EXIT_FAILURE);
+	}
+	// Comienzo la llamada
+	while (!feof(fdclient)){
+        bzero( buffer, MAXLINEA );
+        fgets(buffer, MAXLINEA, fdclient);
+		printf("[CLIENTE]: %s", buffer);
+        sleep(1);
+		// Lo envio al cliente para que tambien imprima la llamada
+        n = sendto(sockfd, buffer, strlen(buffer), 0, (struct sockaddr*) &servaddr, sizeof(servaddr));
+		if (n < 0) {
+            perror("sendto");
+            exit(EXIT_FAILURE);
+        }
+        bzero( buffer, MAXLINEA );
+        n = recvfrom(sockfd, (char *)buffer, MAXLINEA, 0, (struct sockaddr *) &servaddr, &len); 
+       	if (n < 0) {
+       	    perror("recvfrom");
+			exit(EXIT_FAILURE);
+       	}
+		buffer[n]='\0';
+		printf("[SERVER] [%s:%d] %s\n", inet_ntoa(servaddr.sin_addr), ntohs(servaddr.sin_port), buffer);
+		sleep(1);
+	
+	}
+	fclose(fdclient);
 }
