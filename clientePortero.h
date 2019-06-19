@@ -1,10 +1,10 @@
-#define MAXLINEA 50
+#define MAXLINEA 1024
 
 int conectar( struct sockaddr_in dir );
 
-int principal( FILE *fp, int dir );
+int principal( FILE *fp, int sockTCP, char *args[]);
 
-int analizar( char *s, int sockfd,char *respuesta );
+int analizar( char *s, int sockfd, char *respuesta, char *args[]);
 
 void luces( int enc_apag, int hora, int minutos );
 
@@ -12,7 +12,7 @@ void riego( int enc_apag, int hora, int minutos );
 
 void solicitarImagen();
 
-void contestarLlamada(int sockUDP,const struct sockaddr *dirUDP, socklen_t saUDP);
+void contestarLlamada(char *args[]);
 
 int separarPalabras( char *cad, char ***ptr );
 
