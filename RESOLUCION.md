@@ -2,45 +2,31 @@
 
 ## 
 
-* Servidor: concurrente con Threads
+* Servidor: concurrente con Threads.
 
-* Si es concurrente conviene utilizar pthreads
-
-* Comunicaciones TPC: comandos apagar y encender luces, activar/desactivar riego, aviso llamada portero, envio imagen portero
+* Comunicaciones TPC: comandos apagar, encender y programar luces, activar/desactivar y programar riego.
+* FTP: envio imagen portero.
+* UDP: contestar y recibir llamanda portero.
 
 * Cliente:
 comandos:
-   - encenderLuces()
-   - apagarLuces()
-  - programarEncendidoLuces( hora, minutos, duracion en minutos )
+    - Encender Luces
+    - Apagar Luces
+    - programar encendido Luces( hora, minutos, duracion en minutos )
   
-  - activarRiego()
-  - desactivarRiego()
-  - programarRiego( hora, minutos, duracion )
-  - solicitarImagenPortero()
-  - contestarLlamada( archivoAudio )
-  - recivirAvisoPortero()
+    - activar Riego
+    - desactivar Riegp
+    - programar Riego( hora, minutos, duracion )
   
-
-* Servidor:
-comandos:
-    - encenderLuces()
-    - apagarLuces()
-    - programarLuces( horaEncendido, minutosEncendido, duracion )
-    
-    - activarRiego()
-    - desactivarRiego()
-    - programarRiego( HoraEncendido, minutoEncendido, duracion )
-
-    - enviarAvisoPortero()
-    - enviarImagenPortero()
-    - recivirLlamada()
-    - enviarLlamada()
+    - solicitar Imagen Portero
+    - contestar Llamada
+  
 
 * Comunicaciones UDP: envio/recepcion de audio. (administrar conexion)
 
 * Proceso generador de llamadas al portero en el servidor.
 
-* archivo de configuracion: leer , y bloquear para escribir (utilizar mutex)
+* Programacion de luces y riego mediante archivo de configuracion con acceso protegido con mutex.
+
 
 
