@@ -29,7 +29,7 @@ En la comunicacion con el servidor de cada comando se realizan las siguientes:
 * prender riego: se envia opcion 2 ON, se recibe resultado de la operacion desde servidor. El servidor muestra el resultado de la operacion.
 * apagar riego: se envia opcion 2 OFF, se recibe resultado de la operacion desde servidor. El servidor muestra el resultado de la operacion.
 * programar riego: se envia opcion 2 PROG hora minuto duracion, se recibe resultado de la operacion desde el servidor. El servidor muestra el resultado de la operacion.
-* envio de imagen: se envia opcion 3, se procesa la transferencia de bloques del archivo con el servidor, al finalizar, se recibe resultado de la operacion desde servidor.
+* envio de imagen: se envia opcion 3, se procesa la transferencia de bloques del archivo con el servidor, al finalizar, se recibe resultado de la operacion desde servidor. En servidor muestra informacion de cada bloque transmitido, al finalizar muestra resultado de la operacion.
 * llamada del portero: se envia opcion 4, el cliente inicia la llamada con el servidor e intercambian mensajes, el cliente muestra los mensajes intercambiados y el servidor indica cuando el cliente inicia y termina la llamada.
 En todos los casos luego de finalizacion de un comando el cliente vuelve al menu principal, y el servidor culmina el thread y vuelve al proceso principal.
 
